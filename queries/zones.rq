@@ -1,0 +1,25 @@
+PREFIX brick: <https://brickschema.org/schema/1.4/Brick#>
+PREFIX cpr: <http://example.org/ontology/cp-retail#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?label ?setpoint ?tolerance ?humidityLow ?humidityHigh ?tempCode ?rhCode
+WHERE {
+  ?zone a brick:HVAC_Zone ;
+        rdfs:label ?label ;
+        cpr:comfortToleranceCelsius ?tolerance ;
+        cpr:humidityLowLimitPercent ?humidityLow ;
+        cpr:humidityHighLimitPercent ?humidityHigh .
+  FILTER(lang(?label) = "ja")
+  ?setpointNode a brick:Cooling_Temperature_Setpoint ;
+                brick:isPointOf ?zone ;
+                brick:value ?setpoint .
+  ?temp a brick:Zone_Air_Temperature_Sensor ;
+        brick:isPointOf ?zone ;
+        brick:timeseries ?tempSeries .
+  ?tempSeries brick:hasTimeseriesId ?tempCode .
+  ?rh a brick:Zone_Air_Humidity_Sensor ;
+      brick:isPointOf ?zone ;
+      brick:timeseries ?rhSeries .
+  ?rhSeries brick:hasTimeseriesId ?rhCode .
+}
+ORDER BY ?label

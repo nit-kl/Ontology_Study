@@ -1,0 +1,14 @@
+PREFIX cpr: <http://example.org/ontology/cp-retail#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?label ?schedule
+WHERE {
+  ?store a cpr:RetailBuilding ;
+         cpr:storeCode "{{STORE_CODE}}" ;
+         cpr:followsProcess ?process .
+  ?process rdfs:label ?label ;
+           cpr:scheduleText ?schedule .
+  FILTER(lang(?label) = "ja")
+  FILTER(lang(?schedule) = "ja")
+}
+ORDER BY ?label

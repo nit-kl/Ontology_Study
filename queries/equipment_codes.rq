@@ -1,0 +1,7 @@
+PREFIX cpr: <http://example.org/ontology/cp-retail#>
+
+SELECT ?code
+WHERE {
+  ?equip cpr:equipmentCode ?code .
+}
+ORDER BY ?code

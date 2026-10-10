@@ -1,0 +1,26 @@
+PREFIX cpr: <http://example.org/ontology/cp-retail#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?label ?table ?comment ?cadence ?kind ?value
+WHERE {
+  ?store a cpr:RetailBuilding ;
+         cpr:storeCode "{{STORE_CODE}}" ;
+         cpr:referencesDataset ?dataset .
+  ?dataset rdfs:label ?label ;
+           cpr:rdbTable ?table ;
+           rdfs:comment ?comment ;
+           cpr:cadenceText ?cadence .
+  FILTER(lang(?label) = "ja")
+  FILTER(lang(?comment) = "ja")
+  FILTER(lang(?cadence) = "ja")
+  {
+    ?dataset cpr:joinKey ?value .
+    BIND("key" AS ?kind)
+  }
+  UNION
+  {
+    ?dataset cpr:holdsAttribute ?value .
+    BIND("attr" AS ?kind)
+  }
+}
+ORDER BY ?table ?kind ?value

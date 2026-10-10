@@ -1,0 +1,753 @@
+# CPグループ小売店舗の空調オントロジー（学習用サンプル）
+#
+# 主題は、タイのCPオール型コンビニ1店舗の空調である。
+# 商品の売上や在庫は扱わない。
+#
+# 標準語彙をそのまま使う。全文は同梱せず IRI で参照する。
+# デモの rdflib は owl:imports を取得しない。グラフDBへ載せるときに
+# Brick 1.4、BOT、SOSA、QUDT を合わせて読むと、ここの型宣言が検証できる。
+#
+#   Brick 1.4  設備、空調ゾーン、ポイント、供給関係、時系列への参照
+#   BOT         敷地、建物、階、空間、建物要素
+#   SOSA        センサーがどの量を観測するか
+#   QUDT        単位と、定格能力のような数量
+#   schema.org  運営組織と住所
+#
+# グラフに置くもの
+#   建物と空間のトポロジー、機器の構成、どのポイントが何を測るか。
+#   設定温度、快適幅、点検間隔、定格能力、朝の指令方針（しきい値と戻す条件）。
+# グラフに置かないもの
+#   温度、湿度、電力、電力量、運転時間、発停、風量の段、エアカーテンの発停。
+#   来店人数、入口ドアの開放率、外気予報、室内機の運転モード。
+#   各ポイントの brick:hasTimeseriesId が、業務DB point_reading.point_code と一致する。
+#
+# 数値の測定値は架空である。店舗も実在しない。
+
+@prefix owl:          <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:          <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:         <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:          <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:          <http://purl.org/dc/terms/> .
+@prefix schema:       <https://schema.org/> .
+@prefix brick:        <https://brickschema.org/schema/1.4/Brick#> .
+@prefix bot:          <https://w3id.org/bot#> .
+@prefix sosa:         <http://www.w3.org/ns/sosa/> .
+@prefix qudt:         <http://qudt.org/schema/qudt/> .
+@prefix unit:         <http://qudt.org/vocab/unit/> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix cpr:          <http://example.org/ontology/cp-retail#> .
+@prefix id:           <http://example.org/resource/> .
+
+<http://example.org/ontology/cp-retail> a owl:Ontology ;
+  owl:versionInfo "0.3.0" ;
+  owl:versionIRI <http://example.org/ontology/cp-retail/0.3.0> ;
+  dct:title "CPグループ店舗の空調オントロジー（サンプル）"@ja ;
+  dct:title "CP Group store HVAC ontology (sample)"@en ;
+  dct:created "2026-10-10"^^xsd:date ;
+  dct:description "1店舗の空調を Brick、BOT、SOSA、QUDT で表す。測定と来店などの状況は業務DB、朝の機器指令の方針はグラフに置く。"@ja ;
+  rdfs:seeAlso <https://brickschema.org/schema/1.4/Brick> , <https://w3id.org/bot> , <http://www.w3.org/ns/sosa/> , <http://qudt.org/schema/qudt/> ;
+  owl:imports <https://brickschema.org/schema/1.4/Brick> , <https://w3id.org/bot> , <http://www.w3.org/ns/sosa/> , <http://qudt.org/schema/qudt/> ;
+  cpr:sampleOnly true .
+
+#################################################################
+# この店舗のためだけに足す語彙
+# 設備、空間、センサー、単位は標準クラスを使い、ここには方針とDBの橋だけを置く。
+#################################################################
+
+cpr:sampleOnly a owl:DatatypeProperty ;
+  rdfs:label "サンプルである"@ja ;
+  rdfs:range xsd:boolean .
+
+cpr:rdbColumn a owl:AnnotationProperty ;
+  rdfs:label "対応する業務DB列"@ja ;
+  rdfs:comment "標準プロパティの値と、業務DBの列を対応づけるための注釈。"@ja .
+
+cpr:RetailBuilding a owl:Class ;
+  rdfs:subClassOf bot:Building, brick:Building, schema:Store ;
+  rdfs:label "小売店舗の建物"@ja ;
+  rdfs:comment "推論器がなくても検索できるよう、インスタンスには bot:Building と brick:Building も直接型付けする。"@ja .
+
+cpr:OperatingHoursSensor a owl:Class ;
+  rdfs:subClassOf brick:Sensor, sosa:Sensor ;
+  rdfs:label "累積運転時間センサー"@ja ;
+  rdfs:comment "Brick の Sensor と SOSA の Sensor に揃える。単位は QUDT の HR。値の列は時系列DB。"@ja .
+
+cpr:OperationalDataset a owl:Class ;
+  rdfs:label "業務データセット"@ja ;
+  rdfs:comment "Brick の brick:timeseries がポイント単位の入口で、このクラスは表全体の契約である。"@ja .
+
+cpr:StoreProcess a owl:Class ;
+  rdfs:label "店舗の空調プロセス"@ja .
+
+cpr:KpiDefinition a owl:Class ;
+  rdfs:label "KPI定義"@ja .
+
+cpr:AirCurtain a owl:Class ;
+  rdfs:subClassOf brick:Equipment, bot:Element ;
+  rdfs:label "エアカーテン"@ja ;
+  rdfs:comment "Brick 1.4 にエアカーテンの安定したクラスがないため、brick:Equipment と bot:Element のサブクラスにする。推論器がなくても検索できるよう、インスタンスには brick:Equipment も直接型付けする。"@ja .
+
+cpr:FanSpeedCommand a owl:Class ;
+  rdfs:subClassOf brick:Setpoint ;
+  rdfs:label "風量指令"@ja ;
+  rdfs:comment "風量の段を表す setpoint。1 が弱、2 が中、3 が強で、段の名前は DispatchPolicy にある。いまの段は時系列。"@ja .
+
+cpr:DispatchPolicy a owl:Class ;
+  rdfs:label "機器指令の方針"@ja ;
+  rdfs:comment "朝の指令で使うしきい値と、戻す条件の材料。測定値や来店人数そのものは持たない。"@ja .
+
+cpr:storeCode a owl:DatatypeProperty ;
+  rdfs:label "店舗コード"@ja ;
+  rdfs:domain cpr:RetailBuilding ;
+  rdfs:range xsd:string ;
+  cpr:rdbColumn "store_code" .
+
+cpr:equipmentCode a owl:DatatypeProperty ;
+  rdfs:label "機器コード"@ja ;
+  rdfs:domain brick:Equipment ;
+  rdfs:range xsd:string ;
+  cpr:rdbColumn "equipment_code" .
+
+cpr:dispatchRole a owl:DatatypeProperty ;
+  rdfs:label "指令上の役割"@ja ;
+  rdfs:domain brick:Equipment ;
+  rdfs:range xsd:string ;
+  rdfs:comment "朝の機器指令が、どの機器をどの役割で見るかを示す。方針なのでグラフに置く。"@ja .
+
+cpr:peopleCount a owl:DatatypeProperty ;
+  rdfs:label "来店人数"@ja ;
+  rdfs:range xsd:integer ;
+  cpr:rdbColumn "people_count" .
+
+cpr:doorOpenRatio a owl:DatatypeProperty ;
+  rdfs:label "ドア開放率"@ja ;
+  rdfs:range xsd:decimal ;
+  cpr:rdbColumn "open_ratio" .
+
+cpr:forecastTemperature a owl:DatatypeProperty ;
+  rdfs:label "予報外気温"@ja ;
+  rdfs:range xsd:decimal ;
+  cpr:rdbColumn "outside_temp_c" .
+
+cpr:hvacModeCode a owl:DatatypeProperty ;
+  rdfs:label "空調モード"@ja ;
+  rdfs:domain brick:Fan_Coil_Unit ;
+  rdfs:range xsd:string ;
+  cpr:rdbColumn "mode_code" .
+
+cpr:operatedBy a owl:ObjectProperty ;
+  rdfs:label "運営する組織"@ja ;
+  rdfs:domain bot:Building ;
+  rdfs:range schema:Organization ;
+  rdfs:comment "BOT と Brick は建物の形を表し、運営会社は schema:Organization で表す。"@ja .
+
+cpr:comfortToleranceCelsius a owl:DatatypeProperty ;
+  rdfs:label "快適幅（℃）"@ja ;
+  rdfs:domain brick:HVAC_Zone ;
+  rdfs:range xsd:decimal ;
+  rdfs:comment "設定温度からの許容偏差。方針なのでグラフに置く。ゾーン温度の測定値は時系列。"@ja .
+
+cpr:humidityLowLimitPercent a owl:DatatypeProperty ;
+  rdfs:label "相対湿度の下限（%）"@ja ;
+  rdfs:domain brick:HVAC_Zone ;
+  rdfs:range xsd:decimal .
+
+cpr:humidityHighLimitPercent a owl:DatatypeProperty ;
+  rdfs:label "相対湿度の上限（%）"@ja ;
+  rdfs:domain brick:HVAC_Zone ;
+  rdfs:range xsd:decimal .
+
+cpr:serviceIntervalHours a owl:DatatypeProperty ;
+  rdfs:label "点検間隔（時間）"@ja ;
+  rdfs:domain brick:Filter ;
+  rdfs:range xsd:integer ;
+  rdfs:comment "フィルタの方針値。累積運転時間の測定は OperatingHoursSensor の時系列。"@ja .
+
+cpr:ratedCoolingPower a owl:ObjectProperty ;
+  rdfs:label "定格冷房能力"@ja ;
+  rdfs:domain brick:Heat_Pump ;
+  rdfs:range qudt:QuantityValue ;
+  rdfs:comment "機器仕様。消費電力の測定は brick:Electric_Power_Sensor の時系列。"@ja .
+
+cpr:grossFloorArea a owl:ObjectProperty ;
+  rdfs:label "延床面積"@ja ;
+  rdfs:domain bot:Building ;
+  rdfs:range qudt:QuantityValue .
+
+cpr:followsProcess a owl:ObjectProperty ;
+  rdfs:label "従うプロセス"@ja ;
+  rdfs:domain bot:Building ;
+  rdfs:range cpr:StoreProcess .
+
+cpr:definesKpi a owl:ObjectProperty ;
+  rdfs:label "KPIを定義"@ja ;
+  rdfs:domain bot:Building ;
+  rdfs:range cpr:KpiDefinition .
+
+cpr:referencesDataset a owl:ObjectProperty ;
+  rdfs:label "業務データを参照"@ja ;
+  rdfs:domain bot:Building ;
+  rdfs:range cpr:OperationalDataset .
+
+cpr:scheduleText a owl:DatatypeProperty ;
+  rdfs:label "実施タイミング"@ja ;
+  rdfs:domain cpr:StoreProcess ;
+  rdfs:range rdf:langString .
+
+cpr:kpiFormulaText a owl:DatatypeProperty ;
+  rdfs:label "KPIの算出方法"@ja ;
+  rdfs:domain cpr:KpiDefinition ;
+  rdfs:range rdf:langString .
+
+cpr:rdbTable a owl:DatatypeProperty ;
+  rdfs:label "業務DBの表名"@ja ;
+  rdfs:domain cpr:OperationalDataset ;
+  rdfs:range xsd:string .
+
+cpr:joinKey a owl:DatatypeProperty ;
+  rdfs:label "結合キー"@ja ;
+  rdfs:domain cpr:OperationalDataset ;
+  rdfs:range xsd:string .
+
+cpr:holdsAttribute a owl:DatatypeProperty ;
+  rdfs:label "格納する属性"@ja ;
+  rdfs:domain cpr:OperationalDataset ;
+  rdfs:range xsd:string .
+
+cpr:cadenceText a owl:DatatypeProperty ;
+  rdfs:label "更新の頻度"@ja ;
+  rdfs:domain cpr:OperationalDataset ;
+  rdfs:range rdf:langString .
+
+cpr:usesPolicy a owl:ObjectProperty ;
+  rdfs:label "指令方針を使う"@ja ;
+  rdfs:domain bot:Building ;
+  rdfs:range cpr:DispatchPolicy .
+
+cpr:nearCapacityRatio a owl:DatatypeProperty ;
+  rdfs:label "定格に近いとみなす比率"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:decimal .
+
+cpr:doorOpenRatioLimit a owl:DatatypeProperty ;
+  rdfs:label "ドア開放率の上限"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:decimal ;
+  rdfs:comment "この値を下回ったらエアカーテンをオフに戻す。"@ja .
+
+cpr:ventilationCutoffCelsius a owl:DatatypeProperty ;
+  rdfs:label "換気を弱める外気温（℃）"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:decimal ;
+  rdfs:comment "外気がこの温度を下回ったら排気ファンの風量を戻す。"@ja .
+
+cpr:footfallBaseline a owl:DatatypeProperty ;
+  rdfs:label "平常の来店人数"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:integer ;
+  rdfs:comment "直近1時間がこの人数以下に戻ったら、バックルームの設定温度を戻す。"@ja .
+
+cpr:setpointReliefCelsius a owl:DatatypeProperty ;
+  rdfs:label "設定温度を緩める幅（℃）"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:decimal .
+
+cpr:fanSpeedLow a owl:DatatypeProperty ;
+  rdfs:label "風量の弱"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:integer .
+
+cpr:fanSpeedMid a owl:DatatypeProperty ;
+  rdfs:label "風量の中"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:integer .
+
+cpr:fanSpeedHigh a owl:DatatypeProperty ;
+  rdfs:label "風量の強"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:integer .
+
+cpr:speedLabelLow a owl:DatatypeProperty ;
+  rdfs:label "風量の弱の表示"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:string .
+
+cpr:speedLabelMid a owl:DatatypeProperty ;
+  rdfs:label "風量の中の表示"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:string .
+
+cpr:speedLabelHigh a owl:DatatypeProperty ;
+  rdfs:label "風量の強の表示"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:string .
+
+cpr:coolingMode a owl:DatatypeProperty ;
+  rdfs:label "冷房モードのコード"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:string .
+
+cpr:dryMode a owl:DatatypeProperty ;
+  rdfs:label "除湿モードのコード"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:string .
+
+cpr:coolingModeLabel a owl:DatatypeProperty ;
+  rdfs:label "冷房モードの表示"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:string .
+
+cpr:dryModeLabel a owl:DatatypeProperty ;
+  rdfs:label "除湿モードの表示"@ja ;
+  rdfs:domain cpr:DispatchPolicy ;
+  rdfs:range xsd:string .
+
+# 標準プロパティと業務DB列の対応。時系列IDが測定テーブルの主キーになる。
+brick:hasTimeseriesId rdfs:label "時系列ID"@ja ;
+  cpr:rdbColumn "point_code" .
+
+#################################################################
+# 業務DBへの橋渡し
+#################################################################
+
+id:ds-points a cpr:OperationalDataset ;
+  rdfs:label "空調ポイントの時系列"@ja ;
+  rdfs:comment "温度、湿度、電力、電力量、発停、運転時間、風量の段、エアカーテンの発停。ポイントの意味は Brick と SOSA と QUDT が持ち、数値はこの表が持つ。結合は店舗コードと brick:hasTimeseriesId。"@ja ;
+  cpr:rdbTable "point_reading" ;
+  cpr:joinKey "store_code" , "point_code" ;
+  cpr:holdsAttribute "recorded_at" , "value_num" ;
+  cpr:cadenceText "サンプルは基準日の2時間ごと。電力量は日次。"@ja .
+
+id:ds-footfall a cpr:OperationalDataset ;
+  rdfs:label "来店人数"@ja ;
+  rdfs:comment "直近1時間の来店人数。人数カウンタかレジ通過の件数で、店舗が普段持っている数。指令の判断材料であり、測定そのものではない。"@ja ;
+  cpr:rdbTable "footfall" ;
+  cpr:joinKey "store_code" ;
+  cpr:holdsAttribute "recorded_at" , "people_count" ;
+  cpr:cadenceText "直近1時間を基準時刻に1件。"@ja .
+
+id:ds-door a cpr:OperationalDataset ;
+  rdfs:label "入口ドアの開放率"@ja ;
+  rdfs:comment "直近15分に入口ドアが開いていた割合。0から1の比で、来店センサやドア開閉接点から作れる。"@ja ;
+  cpr:rdbTable "door_interval" ;
+  cpr:joinKey "store_code" ;
+  cpr:holdsAttribute "recorded_at" , "open_ratio" ;
+  cpr:cadenceText "直近15分を基準時刻に1件。"@ja .
+
+id:ds-forecast a cpr:OperationalDataset ;
+  rdfs:label "外気温度の予報"@ja ;
+  rdfs:comment "基準時刻に入手した、先2時間の外気温。公開の予報や店舗の外気センサの延長で足りる。"@ja ;
+  cpr:rdbTable "weather_forecast" ;
+  cpr:joinKey "store_code" ;
+  cpr:holdsAttribute "issued_at" , "target_at" , "outside_temp_c" ;
+  cpr:cadenceText "基準時刻に、1時間先と2時間先を入れる。"@ja .
+
+id:ds-mode a cpr:OperationalDataset ;
+  rdfs:label "室内機の運転モード"@ja ;
+  rdfs:comment "冷房か除湿か。数値の時系列には乗せず、機器コードで結合する。コードの意味は DispatchPolicy にある。"@ja ;
+  cpr:rdbTable "equipment_mode" ;
+  cpr:joinKey "store_code" , "equipment_code" ;
+  cpr:holdsAttribute "recorded_at" , "mode_code" ;
+  cpr:cadenceText "基準時刻の最新モード。"@ja .
+
+#################################################################
+# 組織と建物トポロジー（BOT、Brick、schema.org）
+#################################################################
+
+id:org-cp-group a schema:Organization ;
+  rdfs:label "CPグループ"@ja ;
+  rdfs:label "Charoen Pokphand Group"@en ;
+  rdfs:label "เครือเจริญโภคภัณฑ์"@th .
+
+id:org-cp-all a schema:Organization ;
+  rdfs:label "CPオール"@ja ;
+  rdfs:label "CP All"@en ;
+  rdfs:label "ซีพี ออลล์"@th ;
+  schema:parentOrganization id:org-cp-group .
+
+id:area-thailand a schema:AdministrativeArea ;
+  rdfs:label "タイ"@ja ;
+  rdfs:label "Thailand"@en ;
+  rdfs:label "ประเทศไทย"@th .
+
+id:area-bangkok a schema:AdministrativeArea ;
+  rdfs:label "バンコク"@ja ;
+  rdfs:label "Bangkok"@en ;
+  rdfs:label "กรุงเทพมหานคร"@th ;
+  schema:containedInPlace id:area-thailand .
+
+id:area-pathum-wan a schema:AdministrativeArea ;
+  rdfs:label "パトゥムワン区"@ja ;
+  rdfs:label "Pathum Wan"@en ;
+  rdfs:label "ปทุมวัน"@th ;
+  schema:containedInPlace id:area-bangkok .
+
+id:site-ss a bot:Site ;
+  rdfs:label "サイアムスクエア周辺の敷地（サンプル）"@ja ;
+  bot:hasBuilding id:store-7el-bkk-ss01 .
+
+id:store-7el-bkk-ss01 a cpr:RetailBuilding, bot:Building, brick:Building, schema:Store ;
+  rdfs:label "7-Eleven Siam Square Soi 2（サンプル）"@ja ;
+  rdfs:label "7-Eleven Siam Square Soi 2 (sample)"@en ;
+  rdfs:label "เซเว่น อีเลฟเว่น สยามสแควร์ ซอย 2 (ตัวอย่าง)"@th ;
+  cpr:storeCode "7EL-BKK-SS01" ;
+  cpr:sampleOnly true ;
+  cpr:operatedBy id:org-cp-all ;
+  schema:containedInPlace id:area-pathum-wan ;
+  schema:address "188 Siam Square Soi 2, Pathum Wan, Bangkok 10330（架空番地）" ;
+  schema:openingHours "Mo-Su 00:00-24:00" ;
+  schema:foundingDate "2018-05-12"^^xsd:date ;
+  cpr:grossFloorArea [
+    a qudt:QuantityValue ;
+    qudt:numericValue 128.5 ;
+    qudt:unit unit:M2
+  ] ;
+  bot:hasStorey id:floor-1 ;
+  bot:containsElement id:odu-01, id:fcu-sales, id:fcu-back, id:fcu-stock, id:vent-01, id:curtain-01 ;
+  cpr:followsProcess id:proc-comfort, id:proc-filter, id:proc-power, id:proc-dispatch ;
+  cpr:definesKpi id:kpi-comfort, id:kpi-energy, id:kpi-filter ;
+  cpr:referencesDataset id:ds-points, id:ds-footfall, id:ds-door, id:ds-forecast, id:ds-mode ;
+  cpr:usesPolicy id:policy-morning ;
+  rdfs:comment "架空の1店舗。空調の測定列は point_reading を、来店・ドア・予報・運転モードは別表を、店舗コードで参照する。"@ja .
+
+id:floor-1 a bot:Storey, brick:Floor ;
+  rdfs:label "1階"@ja ;
+  bot:hasSpace id:space-sales, id:space-back, id:space-stock, id:space-roof, id:space-entrance .
+
+id:space-entrance a bot:Space, brick:Room ;
+  rdfs:label "入口"@ja ;
+  rdfs:label "entrance"@en .
+
+id:space-sales a bot:Space, brick:Room ;
+  rdfs:label "売場"@ja ;
+  rdfs:label "sales floor"@en .
+
+id:space-back a bot:Space, brick:Room ;
+  rdfs:label "バックルーム"@ja ;
+  rdfs:label "back room"@en .
+
+id:space-stock a bot:Space, brick:Room ;
+  rdfs:label "倉庫"@ja ;
+  rdfs:label "stock room"@en .
+
+id:space-roof a bot:Space, brick:Room ;
+  rdfs:label "屋上機器スペース"@ja ;
+  rdfs:label "roof equipment space"@en .
+
+#################################################################
+# 空調ゾーン。設定温度は Brick の setpoint に brick:value で置く。
+#################################################################
+
+id:zone-sales a brick:HVAC_Zone ;
+  rdfs:label "売場ゾーン"@ja ;
+  brick:hasPart id:space-sales ;
+  cpr:comfortToleranceCelsius 1.5 ;
+  cpr:humidityLowLimitPercent 40 ;
+  cpr:humidityHighLimitPercent 70 .
+
+id:zone-back a brick:HVAC_Zone ;
+  rdfs:label "バックルームゾーン"@ja ;
+  brick:hasPart id:space-back ;
+  cpr:comfortToleranceCelsius 1.5 ;
+  cpr:humidityLowLimitPercent 40 ;
+  cpr:humidityHighLimitPercent 70 .
+
+id:zone-stock a brick:HVAC_Zone ;
+  rdfs:label "倉庫ゾーン"@ja ;
+  brick:hasPart id:space-stock ;
+  cpr:comfortToleranceCelsius 1.5 ;
+  cpr:humidityLowLimitPercent 40 ;
+  cpr:humidityHighLimitPercent 70 .
+
+id:sp-sales a brick:Cooling_Temperature_Setpoint ;
+  rdfs:label "売場の冷房設定温度"@ja ;
+  brick:isPointOf id:zone-sales ;
+  brick:hasQuantity quantitykind:Temperature ;
+  brick:hasUnit unit:DEG_C ;
+  brick:value 25.0 .
+
+id:sp-back a brick:Cooling_Temperature_Setpoint ;
+  rdfs:label "バックルームの冷房設定温度"@ja ;
+  brick:isPointOf id:zone-back ;
+  brick:hasQuantity quantitykind:Temperature ;
+  brick:hasUnit unit:DEG_C ;
+  brick:value 26.0 .
+
+id:sp-stock a brick:Cooling_Temperature_Setpoint ;
+  rdfs:label "倉庫の冷房設定温度"@ja ;
+  brick:isPointOf id:zone-stock ;
+  brick:hasQuantity quantitykind:Temperature ;
+  brick:hasUnit unit:DEG_C ;
+  brick:value 28.0 .
+
+#################################################################
+# 空調システム（Brick）。室内機はファンコイル、室外機はヒートポンプ。
+#################################################################
+
+id:hvac-1 a brick:HVAC_System ;
+  rdfs:label "店舗パッケージ空調（サンプル）"@ja ;
+  brick:hasPart id:odu-01, id:fcu-sales, id:fcu-back, id:fcu-stock, id:vent-01, id:curtain-01 .
+
+id:odu-01 a brick:Heat_Pump, bot:Element ;
+  rdfs:label "室外機1"@ja ;
+  rdfs:label "Outdoor heat pump 1"@en ;
+  cpr:equipmentCode "ODU-01" ;
+  brick:hasLocation id:space-roof ;
+  brick:feeds id:fcu-sales, id:fcu-back, id:fcu-stock ;
+  brick:hasPoint id:pt-odu-power, id:pt-odu-energy ;
+  cpr:ratedCoolingPower [
+    a qudt:QuantityValue ;
+    qudt:numericValue 7.1 ;
+    qudt:unit unit:KiloW
+  ] .
+
+id:fcu-sales a brick:Fan_Coil_Unit, bot:Element ;
+  rdfs:label "売場の室内機"@ja ;
+  rdfs:label "Sales floor fan coil"@en ;
+  cpr:equipmentCode "FCU-SALES" ;
+  brick:hasLocation id:space-sales ;
+  brick:feeds id:zone-sales ;
+  brick:isFedBy id:odu-01 ;
+  cpr:dispatchRole "salesAir" ;
+  brick:hasPart id:filter-sales ;
+  brick:hasPoint id:pt-fcu-sales-status, id:pt-fcu-sales-run, id:pt-fcu-sales-fan .
+
+id:fcu-back a brick:Fan_Coil_Unit, bot:Element ;
+  rdfs:label "バックルームの室内機"@ja ;
+  rdfs:label "Back room fan coil"@en ;
+  cpr:equipmentCode "FCU-BACK" ;
+  brick:hasLocation id:space-back ;
+  brick:feeds id:zone-back ;
+  brick:isFedBy id:odu-01 ;
+  cpr:dispatchRole "reliefSetpoint" ;
+  brick:hasPart id:filter-back ;
+  brick:hasPoint id:pt-fcu-back-status, id:pt-fcu-back-run .
+
+id:fcu-stock a brick:Fan_Coil_Unit, bot:Element ;
+  rdfs:label "倉庫の室内機"@ja ;
+  rdfs:label "Stock room fan coil"@en ;
+  cpr:equipmentCode "FCU-STOCK" ;
+  brick:hasLocation id:space-stock ;
+  brick:feeds id:zone-stock ;
+  brick:isFedBy id:odu-01 ;
+  cpr:dispatchRole "dehumidify" ;
+  brick:hasPart id:filter-stock ;
+  brick:hasPoint id:pt-fcu-stock-status, id:pt-fcu-stock-run .
+
+id:vent-01 a brick:Fan, bot:Element ;
+  rdfs:label "売場の排気ファン"@ja ;
+  rdfs:label "Sales floor exhaust fan"@en ;
+  cpr:equipmentCode "VENT-01" ;
+  cpr:dispatchRole "exhaust" ;
+  brick:hasLocation id:space-sales ;
+  brick:feeds id:zone-sales ;
+  brick:hasPoint id:pt-vent-status, id:pt-vent-fan .
+
+id:curtain-01 a cpr:AirCurtain, brick:Equipment, bot:Element ;
+  rdfs:label "入口エアカーテン"@ja ;
+  rdfs:label "Entrance air curtain"@en ;
+  cpr:equipmentCode "CURTAIN-01" ;
+  cpr:dispatchRole "airCurtain" ;
+  brick:hasLocation id:space-entrance ;
+  brick:feeds id:zone-sales ;
+  brick:hasPoint id:pt-curtain-status .
+
+id:filter-sales a brick:Filter, bot:Element ;
+  rdfs:label "売場室内機のフィルタ"@ja ;
+  brick:isPartOf id:fcu-sales ;
+  cpr:serviceIntervalHours 2000 .
+
+id:filter-back a brick:Filter, bot:Element ;
+  rdfs:label "バックルーム室内機のフィルタ"@ja ;
+  brick:isPartOf id:fcu-back ;
+  cpr:serviceIntervalHours 2000 .
+
+id:filter-stock a brick:Filter, bot:Element ;
+  rdfs:label "倉庫室内機のフィルタ"@ja ;
+  brick:isPartOf id:fcu-stock ;
+  cpr:serviceIntervalHours 2000 .
+
+#################################################################
+# ポイント。意味と単位はグラフ、数値の列は brick:timeseries の先。
+#################################################################
+
+id:pt-sales-temp a brick:Zone_Air_Temperature_Sensor, sosa:Sensor ;
+  rdfs:label "売場ゾーン温度"@ja ;
+  brick:isPointOf id:zone-sales ;
+  brick:hasQuantity quantitykind:Temperature ;
+  brick:hasUnit unit:DEG_C ;
+  sosa:observes quantitykind:Temperature ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-SALES-TEMP" ] .
+
+id:pt-sales-rh a brick:Zone_Air_Humidity_Sensor, sosa:Sensor ;
+  rdfs:label "売場ゾーン湿度"@ja ;
+  brick:isPointOf id:zone-sales ;
+  brick:hasQuantity quantitykind:RelativeHumidity ;
+  brick:hasUnit unit:PERCENT ;
+  sosa:observes quantitykind:RelativeHumidity ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-SALES-RH" ] .
+
+id:pt-back-temp a brick:Zone_Air_Temperature_Sensor, sosa:Sensor ;
+  rdfs:label "バックルームゾーン温度"@ja ;
+  brick:isPointOf id:zone-back ;
+  brick:hasQuantity quantitykind:Temperature ;
+  brick:hasUnit unit:DEG_C ;
+  sosa:observes quantitykind:Temperature ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-BACK-TEMP" ] .
+
+id:pt-back-rh a brick:Zone_Air_Humidity_Sensor, sosa:Sensor ;
+  rdfs:label "バックルームゾーン湿度"@ja ;
+  brick:isPointOf id:zone-back ;
+  brick:hasQuantity quantitykind:RelativeHumidity ;
+  brick:hasUnit unit:PERCENT ;
+  sosa:observes quantitykind:RelativeHumidity ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-BACK-RH" ] .
+
+id:pt-stock-temp a brick:Zone_Air_Temperature_Sensor, sosa:Sensor ;
+  rdfs:label "倉庫ゾーン温度"@ja ;
+  brick:isPointOf id:zone-stock ;
+  brick:hasQuantity quantitykind:Temperature ;
+  brick:hasUnit unit:DEG_C ;
+  sosa:observes quantitykind:Temperature ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-STOCK-TEMP" ] .
+
+id:pt-stock-rh a brick:Zone_Air_Humidity_Sensor, sosa:Sensor ;
+  rdfs:label "倉庫ゾーン湿度"@ja ;
+  brick:isPointOf id:zone-stock ;
+  brick:hasQuantity quantitykind:RelativeHumidity ;
+  brick:hasUnit unit:PERCENT ;
+  sosa:observes quantitykind:RelativeHumidity ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-STOCK-RH" ] .
+
+id:pt-oa-temp a brick:Outside_Air_Temperature_Sensor, sosa:Sensor ;
+  rdfs:label "外気温度"@ja ;
+  brick:isPointOf id:store-7el-bkk-ss01 ;
+  brick:hasQuantity quantitykind:Temperature ;
+  brick:hasUnit unit:DEG_C ;
+  sosa:observes quantitykind:Temperature ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-OA-TEMP" ] .
+
+id:pt-odu-power a brick:Electric_Power_Sensor, sosa:Sensor ;
+  rdfs:label "室外機1の電力"@ja ;
+  brick:isPointOf id:odu-01 ;
+  brick:hasQuantity quantitykind:ActivePower ;
+  brick:hasUnit unit:KiloW ;
+  sosa:observes quantitykind:ActivePower ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-ODU-POWER" ] .
+
+id:pt-odu-energy a brick:Electric_Energy_Sensor, sosa:Sensor ;
+  rdfs:label "室外機1の電力量"@ja ;
+  brick:isPointOf id:odu-01 ;
+  brick:hasQuantity quantitykind:Energy ;
+  brick:hasUnit unit:KiloW-HR ;
+  sosa:observes quantitykind:Energy ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-ODU-ENERGY" ] .
+
+id:pt-fcu-sales-status a brick:On_Off_Status ;
+  rdfs:label "売場室内機の発停"@ja ;
+  brick:isPointOf id:fcu-sales ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-FCU-SALES-STATUS" ] .
+
+id:pt-fcu-back-status a brick:On_Off_Status ;
+  rdfs:label "バックルーム室内機の発停"@ja ;
+  brick:isPointOf id:fcu-back ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-FCU-BACK-STATUS" ] .
+
+id:pt-fcu-stock-status a brick:On_Off_Status ;
+  rdfs:label "倉庫室内機の発停"@ja ;
+  brick:isPointOf id:fcu-stock ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-FCU-STOCK-STATUS" ] .
+
+id:pt-vent-status a brick:On_Off_Status ;
+  rdfs:label "排気ファンの発停"@ja ;
+  brick:isPointOf id:vent-01 ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-VENT-STATUS" ] .
+
+id:pt-fcu-sales-run a cpr:OperatingHoursSensor ;
+  rdfs:label "売場室内機の累積運転時間"@ja ;
+  brick:isPointOf id:fcu-sales ;
+  brick:hasQuantity quantitykind:Time ;
+  brick:hasUnit unit:HR ;
+  sosa:observes quantitykind:Time ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-FCU-SALES-RUN" ] .
+
+id:pt-fcu-back-run a cpr:OperatingHoursSensor ;
+  rdfs:label "バックルーム室内機の累積運転時間"@ja ;
+  brick:isPointOf id:fcu-back ;
+  brick:hasQuantity quantitykind:Time ;
+  brick:hasUnit unit:HR ;
+  sosa:observes quantitykind:Time ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-FCU-BACK-RUN" ] .
+
+id:pt-fcu-sales-fan a cpr:FanSpeedCommand, brick:Setpoint ;
+  rdfs:label "売場室内機の風量"@ja ;
+  brick:isPointOf id:fcu-sales ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-FCU-SALES-FAN" ] .
+
+id:pt-vent-fan a cpr:FanSpeedCommand, brick:Setpoint ;
+  rdfs:label "排気ファンの風量"@ja ;
+  brick:isPointOf id:vent-01 ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-VENT-SPEED" ] .
+
+id:pt-curtain-status a brick:On_Off_Status ;
+  rdfs:label "入口エアカーテンの発停"@ja ;
+  brick:isPointOf id:curtain-01 ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-CURTAIN-STATUS" ] .
+
+id:pt-fcu-stock-run a cpr:OperatingHoursSensor ;
+  rdfs:label "倉庫室内機の累積運転時間"@ja ;
+  brick:isPointOf id:fcu-stock ;
+  brick:hasQuantity quantitykind:Time ;
+  brick:hasUnit unit:HR ;
+  sosa:observes quantitykind:Time ;
+  brick:timeseries [ brick:hasTimeseriesId "PT-FCU-STOCK-RUN" ] .
+
+#################################################################
+# プロセスとKPI。式の材料がどこにあるかを書く。
+#################################################################
+
+id:proc-comfort a cpr:StoreProcess ;
+  rdfs:label "快適性の確認"@ja ;
+  cpr:scheduleText "基準時刻に、ゾーン温度の時系列と、グラフ上の冷房設定温度・快適幅を比べる。"@ja .
+
+id:proc-filter a cpr:StoreProcess ;
+  rdfs:label "フィルタ点検"@ja ;
+  cpr:scheduleText "室内機の累積運転時間が、フィルタの点検間隔以上なら点検候補にする。"@ja .
+
+id:proc-power a cpr:StoreProcess ;
+  rdfs:label "室外機電力の確認"@ja ;
+  cpr:scheduleText "同じ時刻の外気温度と室外機電力を見る。定格冷房能力はグラフの数量。"@ja .
+
+id:proc-dispatch a cpr:StoreProcess ;
+  rdfs:label "朝の機器指令"@ja ;
+  cpr:scheduleText "土曜の開店前に、ゾーンの状態と来店・ドア・外気予報を方針のしきい値と比べ、機器への指令とフィルタの作業指示を分ける。"@ja .
+
+id:policy-morning a cpr:DispatchPolicy ;
+  rdfs:label "土曜朝の機器指令方針"@ja ;
+  cpr:nearCapacityRatio 0.9 ;
+  cpr:doorOpenRatioLimit 0.25 ;
+  cpr:ventilationCutoffCelsius 32.0 ;
+  cpr:footfallBaseline 50 ;
+  cpr:setpointReliefCelsius 1.0 ;
+  cpr:fanSpeedLow 1 ;
+  cpr:fanSpeedMid 2 ;
+  cpr:fanSpeedHigh 3 ;
+  cpr:speedLabelLow "弱" ;
+  cpr:speedLabelMid "中" ;
+  cpr:speedLabelHigh "強" ;
+  cpr:coolingMode "cool" ;
+  cpr:dryMode "dry" ;
+  cpr:coolingModeLabel "冷房" ;
+  cpr:dryModeLabel "除湿" .
+
+id:kpi-comfort a cpr:KpiDefinition ;
+  rdfs:label "快適範囲内のゾーン"@ja ;
+  cpr:kpiFormulaText "brick:HVAC_Zone のうち、最新のゾーン温度が設定温度±快適幅に入る割合。温度は point_reading。"@ja .
+
+id:kpi-energy a cpr:KpiDefinition ;
+  rdfs:label "空調電力量"@ja ;
+  cpr:kpiFormulaText "brick:Electric_Energy_Sensor の日次電力量を、基準日の前日までの7日間で合計する。"@ja .
+
+id:kpi-filter a cpr:KpiDefinition ;
+  rdfs:label "点検間隔を超えた室内機"@ja ;
+  cpr:kpiFormulaText "OperatingHoursSensor の最新値が、対応する brick:Filter の serviceIntervalHours 以上である台数。"@ja .

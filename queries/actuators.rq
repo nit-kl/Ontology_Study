@@ -1,0 +1,35 @@
+PREFIX brick: <https://brickschema.org/schema/1.4/Brick#>
+PREFIX cpr: <http://example.org/ontology/cp-retail#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?role ?code ?label ?zoneLabel ?setpoint ?fanCode ?statusCode
+WHERE {
+  ?store a cpr:RetailBuilding ;
+         cpr:storeCode "{{STORE_CODE}}" .
+  ?equip cpr:dispatchRole ?role ;
+         cpr:equipmentCode ?code ;
+         rdfs:label ?label .
+  FILTER(lang(?label) = "ja")
+  OPTIONAL {
+    ?equip brick:feeds ?zone .
+    ?zone a brick:HVAC_Zone ;
+          rdfs:label ?zoneLabel .
+    FILTER(lang(?zoneLabel) = "ja")
+    ?setpointPoint a brick:Cooling_Temperature_Setpoint ;
+                   brick:isPointOf ?zone ;
+                   brick:value ?setpoint .
+  }
+  OPTIONAL {
+    ?fan a cpr:FanSpeedCommand ;
+         brick:isPointOf ?equip ;
+         brick:timeseries ?fanSeries .
+    ?fanSeries brick:hasTimeseriesId ?fanCode .
+  }
+  OPTIONAL {
+    ?status a brick:On_Off_Status ;
+            brick:isPointOf ?equip ;
+            brick:timeseries ?statusSeries .
+    ?statusSeries brick:hasTimeseriesId ?statusCode .
+  }
+}
+ORDER BY ?role

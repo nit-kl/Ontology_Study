@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>店舗空調</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <p class="brand" id="brand">読み込み中</p>
+        <h1>店舗空調</h1>
+      </div>
+      <p class="clock" id="clock"></p>
+      <p class="disclaimer" id="disclaimer"></p>
+      <button type="button" id="ask-open" class="ghost">質問</button>
+    </header>
+    <nav class="steps" id="steps" aria-label="確認の順序"></nav>
+    <main id="stage"></main>
+    <footer class="dock">
+      <button type="button" id="back" class="ghost">戻る</button>
+      <button type="button" id="next">次へ</button>
+    </footer>
+  </div>
+
+  <dialog id="ask">
+    <div class="ask-head">
+      <h2>質問</h2>
+      <button type="button" id="ask-close" class="ghost">閉じる</button>
+    </div>
+    <div class="prompts" id="prompts"></div>
+    <form id="ask-form">
+      <textarea id="question" name="question" rows="2" maxlength="500" placeholder="指令は？" aria-label="質問"></textarea>
+      <button type="submit" id="ask-button">聞く</button>
+    </form>
+    <article id="result" class="result" hidden>
+      <h3 id="result-title"></h3>
+      <p id="answer" hidden></p>
+      <div id="result-table"></div>
+      <details>
+        <summary>SPARQL</summary>
+        <div id="sparql"></div>
+      </details>
+      <details>
+        <summary>SQL</summary>
+        <div id="sql"></div>
+      </details>
+    </article>
+  </dialog>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

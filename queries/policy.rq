@@ -1,0 +1,28 @@
+PREFIX cpr: <http://example.org/ontology/cp-retail#>
+
+SELECT ?nearCapacityRatio ?doorOpenRatioLimit ?ventilationCutoffCelsius
+       ?footfallBaseline ?setpointReliefCelsius
+       ?fanSpeedLow ?fanSpeedMid ?fanSpeedHigh
+       ?speedLabelLow ?speedLabelMid ?speedLabelHigh
+       ?coolingMode ?dryMode ?coolingModeLabel ?dryModeLabel
+WHERE {
+  ?store a cpr:RetailBuilding ;
+         cpr:storeCode "{{STORE_CODE}}" ;
+         cpr:usesPolicy ?policy .
+  ?policy a cpr:DispatchPolicy ;
+          cpr:nearCapacityRatio ?nearCapacityRatio ;
+          cpr:doorOpenRatioLimit ?doorOpenRatioLimit ;
+          cpr:ventilationCutoffCelsius ?ventilationCutoffCelsius ;
+          cpr:footfallBaseline ?footfallBaseline ;
+          cpr:setpointReliefCelsius ?setpointReliefCelsius ;
+          cpr:fanSpeedLow ?fanSpeedLow ;
+          cpr:fanSpeedMid ?fanSpeedMid ;
+          cpr:fanSpeedHigh ?fanSpeedHigh ;
+          cpr:speedLabelLow ?speedLabelLow ;
+          cpr:speedLabelMid ?speedLabelMid ;
+          cpr:speedLabelHigh ?speedLabelHigh ;
+          cpr:coolingMode ?coolingMode ;
+          cpr:dryMode ?dryMode ;
+          cpr:coolingModeLabel ?coolingModeLabel ;
+          cpr:dryModeLabel ?dryModeLabel .
+}

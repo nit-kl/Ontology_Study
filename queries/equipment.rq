@@ -1,0 +1,67 @@
+PREFIX brick: <https://brickschema.org/schema/1.4/Brick#>
+PREFIX cpr: <http://example.org/ontology/cp-retail#>
+PREFIX qudt: <http://qudt.org/schema/qudt/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX unit: <http://qudt.org/vocab/unit/>
+
+SELECT ?code ?label ?kind ?location ?feedsLabel ?capacity ?interval ?runCode
+WHERE {
+  {
+    ?equip a brick:Fan_Coil_Unit ;
+           cpr:equipmentCode ?code ;
+           rdfs:label ?label ;
+           brick:hasLocation ?locationNode ;
+           brick:feeds ?zone ;
+           brick:hasPart ?filter .
+    FILTER(lang(?label) = "ja")
+    ?locationNode rdfs:label ?location . FILTER(lang(?location) = "ja")
+    ?zone rdfs:label ?feedsLabel . FILTER(lang(?feedsLabel) = "ja")
+    ?filter a brick:Filter ;
+            cpr:serviceIntervalHours ?interval .
+    ?run a cpr:OperatingHoursSensor ;
+         brick:isPointOf ?equip ;
+         brick:timeseries ?series .
+    ?series brick:hasTimeseriesId ?runCode .
+    BIND("室内機" AS ?kind)
+  }
+  UNION
+  {
+    ?equip a brick:Heat_Pump ;
+           cpr:equipmentCode ?code ;
+           rdfs:label ?label ;
+           brick:hasLocation ?locationNode ;
+           brick:feeds ?fed ;
+           cpr:ratedCoolingPower ?power .
+    FILTER(lang(?label) = "ja")
+    ?locationNode rdfs:label ?location . FILTER(lang(?location) = "ja")
+    ?fed rdfs:label ?feedsLabel . FILTER(lang(?feedsLabel) = "ja")
+    ?power qudt:numericValue ?capacity ;
+           qudt:unit unit:KiloW .
+    BIND("室外機" AS ?kind)
+  }
+  UNION
+  {
+    ?equip a brick:Fan ;
+           cpr:equipmentCode ?code ;
+           rdfs:label ?label ;
+           brick:hasLocation ?locationNode ;
+           brick:feeds ?zone .
+    FILTER(lang(?label) = "ja")
+    ?locationNode rdfs:label ?location . FILTER(lang(?location) = "ja")
+    ?zone rdfs:label ?feedsLabel . FILTER(lang(?feedsLabel) = "ja")
+    BIND("換気ファン" AS ?kind)
+  }
+  UNION
+  {
+    ?equip a cpr:AirCurtain ;
+           cpr:equipmentCode ?code ;
+           rdfs:label ?label ;
+           brick:hasLocation ?locationNode ;
+           brick:feeds ?zone .
+    FILTER(lang(?label) = "ja")
+    ?locationNode rdfs:label ?location . FILTER(lang(?location) = "ja")
+    ?zone rdfs:label ?feedsLabel . FILTER(lang(?feedsLabel) = "ja")
+    BIND("エアカーテン" AS ?kind)
+  }
+}
+ORDER BY ?code ?feedsLabel

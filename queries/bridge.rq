@@ -1,0 +1,10 @@
+PREFIX cpr: <http://example.org/ontology/cp-retail#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?label ?column
+WHERE {
+  ?property cpr:rdbColumn ?column ;
+            rdfs:label ?label .
+  FILTER(lang(?label) = "ja")
+}
+ORDER BY ?column
