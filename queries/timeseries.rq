@@ -1,8 +1,0 @@
-PREFIX brick: <https://brickschema.org/schema/1.4/Brick#>
-
-SELECT ?pointCode
-WHERE {
-  ?point brick:timeseries ?series .
-  ?series brick:hasTimeseriesId ?pointCode .
-}
-ORDER BY ?pointCode
