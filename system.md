@@ -1,78 +1,89 @@
-# CP Axtra 構成と欠品代替
+# 小売グループの構成とユースケース
 
-[usecase.md](usecase.md) の欠品代替は、次の経路でこの構成を通る。店頭在庫の確認と引当はネットスーパー（My Lotus's）が POS に対して行い、ナレッジグラフは代替の判断と点検を受け持つ。
+[ユースケース](usecase.md) の3つの場面は、どれもこの構成を同じ型で通る。きっかけを受け、AI がナレッジグラフで調べ、SHACL が事前検証し、必要なときだけ決められた人が承認し、SHACL の再検証と SPARQL Update で確定し、KINETIC が基幹システムと店舗設備へ書き戻す。店頭在庫と今日の販売数はいつも POS が答え、ナレッジグラフは判断と点検と記録を受け持つ。
 
 層ごとの説明: [レイヤー1 基幹システム](docs/layer-1.md)、[レイヤー2 セマンティックETL](docs/layer-2.md)、[レイヤー3 ナレッジグラフ](docs/layer-3.md)、[レイヤー4 AI推論とキネティック実行](docs/layer-4.md)、[レイヤー5 業務画面とガバナンス](docs/layer-5.md)。
 
-- シーン1: My Lotus's が POS の店頭在庫を確認する。欠品なら AI（Bedrock 上の LangGraph エージェント）に代替を頼み、AI が SPARQL で問い合わせ、OWL が同じ容量・同じ区分の牛乳を推論する。候補の在庫も My Lotus's が POS で確認する
-- シーン2: AI がレイヤー3の欠品代替の方針（支払額は元のまま、差額は店舗負担）で提案を作り、SHACL が事前検証する（乳成分の一致、支払額上限、値引上限）。合格したら業務画面が承認カードを出す。1タップ承認は承認付きのアクション要求になり、SHACL が承認の有無を加えて再検証する。合格すると SPARQL Update で注文の対象商品を差し替え、Update の成功を受けて PROV-O の来歴が監査グラフに残る
-- シーン3: KINETIC が POS（ピッカー端末と引当）、SAP（引当と会計伝票）、My Lotus's（注文の原本）の順に書き戻す。POS で引当できなければ、残りを止めて注文を元に戻し、取り消しの来歴を残してお客さんに伝える。ピッキング完了と配達出発は、レイヤー1の中で My Lotus's に表示される
-- データの置き場: 商品マスタ、顧客、注文と、ロットの最新状態、センサーごとの最新の温度、今の売価はトリプルストアに入る。販売明細、温度の連続記録、在庫移動や発注の履歴、注文の変更履歴は履歴の蓄積先に入る。承認と取り消しの来歴はレイヤー5の監査グラフに入る
+## ユースケースごとの経路
+
+- [UC1 ネットスーパーの欠品代替](usecases/uc1-stockout.md): ネットスーパーアプリが POS の店頭在庫を確認し、欠品なら AI に代替を頼む。OWL が同じ容量・同じ区分の牛乳を推論し、AI が欠品代替の方針で提案を作る。SHACL の事前検証、お客さんの1タップ承認、再検証を経て注文を差し替え、KINETIC が POS、SAP、ネットスーパーアプリの順に書き戻す。POS で引当できなければ取り消す
+- [UC2 電力ピークの自動調整](usecases/uc2-power-peak.md): 毎日 12:30 に KINETIC のスケジュールが AI に調整案を頼む。OWL が予報、電力メーター、設備台帳から、ピークの見込みと動かせる設備を推論する。SHACL が食品安全、霜取りの間隔、売場の快適性、設備操作の範囲を点検し、方針の範囲内なので承認なしで確定する。KINETIC が BMS で霜取り、予冷、空調、照明を時刻どおりに動かし、実行中は SHACL で温度を見張る。外れたら AI がその設備だけを元に戻す
+- [UC3 夕方の在庫融通と見切り](usecases/uc3-evening-transfer.md): 毎日 16:00 に KINETIC のスケジュールが AI に融通の案を頼む。AI が近くの3店の POS に店頭在庫と今日の販売数を聞き、GeoSPARQL で帰り便が立ち寄れる店を探す。上限以内の移動と見切りは承認なしで、上限を超える移動は受け入れる店の店長の承認で確定する。KINETIC が SAP、TMS、スタッフ端末、POS、電子棚札へ書き戻し、数が足りなければ数量を直し、見切りは時刻を待って値引きする
+- データの置き場: 商品マスタ、店・設備・車両の台帳、棚割、顧客、注文と、ロット、設備、センサー、電力メーター、予報、売価、車両のルートの最新状態、確定した調整計画・店間移動・見切りはトリプルストアに入る。販売明細、温度と電力の連続記録、在庫移動や発注の履歴、注文の変更履歴は履歴の蓄積先に入る。承認、自動で確定した規則、取り消し、元に戻した操作の来歴はレイヤー5の監査グラフに入る
+
+## 構成図
 
 ```mermaid
 flowchart TB
     subgraph L5["Layer 5: 業務画面 & ガバナンス層 (Workshop / Lineage 代替)"]
-        UI1["モデル駆動型Webアプリ<br/>(Metaphactory / React)<br/>【SHACL Form / GraphQL-LD】<br/>シーン2: 承認カードと1タップ承認"]
-        UI2["サプライチェーン・コントロールタワー<br/>【GeoSPARQL / BI】"]
-        GOV["データ来歴・監査・権限基盤<br/>【W3C PROV-O / ODRL / Named Graph】<br/>シーン2: 承認の来歴（監査グラフ）"]
+        UI1["モデル駆動型Webアプリ<br/>(Metaphactory / React)<br/>【SHACL Form / GraphQL-LD】<br/>承認カードと承認画面・自動調整の通知<br/>UC1: お客さん / UC2・UC3: 店長"]
+        UI2["サプライチェーン・コントロールタワー<br/>【GeoSPARQL / BI】<br/>店・設備・車両の地図と、電力・欠品・廃棄の指標"]
+        GOV["データ来歴・監査・権限基盤<br/>【W3C PROV-O / ODRL / Named Graph】<br/>承認・自動確定・取り消し・戻しの来歴（監査グラフ）"]
     end
 
     subgraph L4["Layer 4: AI推論 & キネティック実行層 (AIP / Actions 代替)"]
-        AI["GraphRAG & AIエージェント<br/>(Amazon Bedrock + LangGraph / MCP)<br/>自然言語 ➔ SPARQL生成<br/>シーン1・2: 代替の探索と提案"]
-        SPARQL["フェデレーション・クエリ基盤<br/>【W3C SPARQL 1.1 Query / Update】<br/>シーン1: 代替の照会 / シーン2: 注文の更新"]
-        KINETIC["Kinetic ワークフローエンジン<br/>(Temporal / Camunda)<br/>【CloudEvents / BPMN 2.0】<br/>シーン3: ピッカー・在庫・会計・注文へ反映"]
+        AI["GraphRAG & AIエージェント<br/>(Amazon Bedrock + LangGraph / MCP)<br/>自然言語 ➔ SPARQL生成<br/>代替・電力調整・在庫融通の提案"]
+        SPARQL["フェデレーション・クエリ基盤<br/>【W3C SPARQL 1.1 Query / Update / GeoSPARQL】<br/>照会と確定した更新"]
+        KINETIC["Kinetic ワークフローエンジン<br/>(Temporal / Camunda)<br/>【CloudEvents / BPMN 2.0】<br/>スケジュールで起動・時刻待ち・見張り・書き戻し・取り消し"]
     end
 
     subgraph L3["Layer 3: W3C ナレッジグラフ・コア層 (Foundry Ontology 代替)"]
-        OWL["CP Axtra ドメインオントロジー & 推論<br/>(UnifiedSKU / Store / Batch)<br/>【W3C OWL 2 / SKOS / GS1】<br/>シーン1: 同じ容量・区分の代替を推論"]
-        RDF["マルチモデル RDFトリプルストア<br/>(GraphDB / Stardog / Neptune)<br/>【W3C RDF 1.2 / RDF-star / URI】<br/>マスタ・注文・最新状態"]
-        SHACL["形状制約 & アクション検証エンジン<br/>(乳成分・支払額・値引上限・在庫移動・承認)<br/>【W3C SHACL】<br/>シーン2: 事前検証と承認時の再検証"]
+        OWL["小売ドメインオントロジー & 推論<br/>(UnifiedSKU / Store / Batch / Equipment / 温度帯)<br/>【W3C OWL 2 / SKOS / GS1 / Brick / GeoSPARQL】<br/>代替・動かせる設備・立ち寄れる店を推論"]
+        RDF["マルチモデル RDFトリプルストア<br/>(GraphDB / Stardog / Neptune)<br/>【W3C RDF 1.2 / RDF-star / URI】<br/>マスタ・台帳・注文・最新状態・確定した計画"]
+        SHACL["形状制約 & アクション検証エンジン<br/>(食品安全・設備操作・在庫移動・値引き・承認など)<br/>【W3C SHACL】<br/>事前検証・承認時の再検証・実行中の見張り"]
     end
 
     subgraph L2["Layer 2: セマンティックETL層 (HyperAuto 代替)"]
-        RML["セマンティックETL & ストリーミング<br/>(Morph-KGC / Kafka)<br/>【W3C RML / CSVW / SSN・SOSA】"]
-        LAKE[("履歴の蓄積先<br/>(データレイク)<br/>販売明細・温度の連続記録・在庫移動履歴・注文の変更履歴")]
+        RML["セマンティックETL & ストリーミング<br/>(Morph-KGC / Kafka)<br/>【W3C RML / CSVW / SSN・SOSA / GeoSPARQL】"]
+        LAKE[("履歴の蓄積先<br/>(データレイク)<br/>販売明細・温度と電力の連続記録・在庫移動履歴・注文の変更履歴")]
     end
 
-    subgraph L1["Layer 1: CP Axtra 基幹システム層 (Makro 卸売 & Lotus's 小売)"]
-        SAP[("SAP S/4HANA & Ariba<br/>(商品・発注PO・在庫移動STO・会計)<br/>シーン3: 引当と差額の会計伝票")]
-        POS[("店舗 POS & 電子棚札 & ピッカー端末<br/>(店頭在庫・販売実績・ダイナミック売価)<br/>シーン1: 店頭在庫 / シーン3: 引当・ピッキング")]
-        WMS[("WMS / TMS & 温度IoT<br/>(DCロット在庫・コールドチェーン・配送)")]
-        CRM[("Makro PRO / My Lotus's<br/>(HoReCa法人顧客・ネットスーパーと注文の原本)<br/>シーン1〜3: 注文・承認カード・配達表示")]
+    subgraph L1["Layer 1: 基幹システム層 (卸売 & 小売)"]
+        SAP[("SAP S/4HANA & Ariba<br/>(商品・拠点・発注PO・在庫移動STO・会計)")]
+        POS[("店舗システム<br/>(POS・電子棚札・棚割・スタッフ端末)<br/>店頭在庫・今日の販売数・売価・作業指示")]
+        FAC[("店舗設備<br/>(BMS・空調・照明・冷蔵/冷凍ケース・電力メーター・センサー・CMMS)<br/>設備の状態と遠隔操作")]
+        WMS[("WMS / TMS & 輸送の温度IoT<br/>(DCロット在庫・配車とルート・コールドチェーン)")]
+        CRM[("法人向けサービス / ネットスーパーアプリ<br/>(HoReCa法人顧客・ネットスーパーと注文の原本)")]
+        EXT[("外部データ<br/>(気象局の予報)")]
     end
 
     %% データ統合・クエリフロー
-    SAP & POS & WMS & CRM -->|"バッチ/CDC"| RML
-    RML -->|"マスタ・注文・最新状態のRDFトリプル"| RDF
+    SAP & POS & FAC & WMS & CRM & EXT -->|"バッチ/CDC/ストリーム"| RML
+    RML -->|"マスタ・台帳・注文・最新状態のRDFトリプル"| RDF
     RML -->|"履歴"| LAKE
     LAKE -->|"集計"| UI2
-    OWL <-->|"シーン1: 論理推論・分類"| RDF
+    OWL <-->|"論理推論・分類"| RDF
     RDF <-->|"Query / Update"| SPARQL
     SPARQL --> UI1 & UI2
+    GOV -->|"ODRL の権限"| RDF
 
-    %% シーン1: 在庫確認と代替の照会
-    CRM -->|"シーン1: 1. 店頭在庫の確認 (API)"| POS
-    CRM -->|"シーン1・2: 2. 代替の依頼"| AI
-    AI <-->|"シーン1: 3. SPARQL Query"| SPARQL
-    AI -->|"シーン1: 4. 代替候補"| CRM
+    %% きっかけと調べる
+    CRM -->|"UC1: 店頭在庫の確認 (API)"| POS
+    CRM -->|"UC1: 代替の依頼"| AI
+    KINETIC -->|"UC2・UC3: スケジュールで提案を依頼"| AI
+    AI <-->|"SPARQL Query"| SPARQL
+    AI -->|"UC3: 店頭在庫と販売数 (MCP)"| POS
+    AI -->|"UC1: 代替候補"| CRM
 
-    %% シーン2: 事前検証・承認・再検証
-    AI ==>|"シーン2: 5. 事前検証"| SHACL
-    SHACL ==>|"シーン2: 6. 事前検証の結果"| AI
-    AI ==>|"シーン2: 7. 承認カードの依頼"| UI1
-    UI1 ==>|"シーン2: 8. 承認カード"| CRM
-    CRM ==>|"シーン2: 9. 1タップ承認"| UI1
-    UI1 ==>|"シーン2: 10. 承認付きアクション要求"| SHACL
-    SHACL ==>|"シーン2: 11. 再検証OK ➔ SPARQL Update"| SPARQL
-    SPARQL ==>|"シーン2: 12. Update 成功"| SHACL
-    SHACL ==>|"シーン2: 13. 監査証跡記録"| GOV
+    %% 事前検証・承認・再検証
+    AI ==>|"事前検証・承認不要のアクション"| SHACL
+    SHACL ==>|"事前検証の結果"| AI
+    AI ==>|"承認カード・承認依頼・通知"| UI1
+    UI1 ==>|"UC1: お客さんへの承認カード"| CRM
+    CRM ==>|"UC1: お客さんの承認"| UI1
+    UI1 ==>|"承認付きアクション要求"| SHACL
+    SHACL ==>|"合格 ➔ SPARQL Update"| SPARQL
+    SPARQL ==>|"Update 成功"| SHACL
+    SHACL ==>|"監査証跡記録"| GOV
 
-    %% シーン3: Write-back
-    SHACL ==>|"シーン3: 14. イベント発火"| KINETIC
-    KINETIC ==>|"シーン3: 15. Write-back (BAPI / Webhook)"| SAP & POS & CRM
-    KINETIC -.->|"引当失敗時: 注文を元に戻す Update"| SPARQL
-    KINETIC -.->|"引当失敗時: 取り消しの来歴"| GOV
-    KINETIC -.->|"在庫移動 (STO) など別のアクション"| WMS
+    %% Write-back と見張り
+    SHACL ==>|"確定イベント"| KINETIC
+    KINETIC ==>|"Write-back (BAPI / Webhook / BMS)"| SAP & POS & FAC & WMS & CRM
+    POS & FAC & WMS -->|"結果・作業の完了・実数"| KINETIC
+    KINETIC -.->|"UC2: 実行中の見張り"| SHACL
+    KINETIC -.->|"失敗・違反時: 戻しや数量修正の依頼"| AI
+    KINETIC -.->|"UC1 の失敗時: 取り消しの Update"| SPARQL
+    KINETIC -.->|"UC1 の失敗時: 取り消しの来歴"| GOV
 
     classDef w3c fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#0f172a;
     classDef gate fill:#eff6ff,stroke:#e11d48,stroke-width:2px,color:#0f172a;
@@ -81,5 +92,7 @@ flowchart TB
     class UI1,UI2,GOV,AI,SPARQL,OWL,RDF,RML w3c;
     class SHACL gate;
     class KINETIC kinetic;
-    class SAP,POS,WMS,CRM,LAKE source;
+    class SAP,POS,FAC,WMS,CRM,EXT,LAKE source;
 ```
+
+承認が要らないアクション（UC2 の方針の範囲内の調整と元に戻す操作、UC3 の上限以内の移動・見切り・数量の減少など）は、事前検証のあとに承認と再検証を飛ばして、そのまま Update と確定イベントへ進む。どのアクションに誰の承認が要るかは [レイヤー3](docs/layer-3.md#承認の要否) で決めている。
