@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>スタッフ端末</title>
+</head>
+<body>
+  <div class="device">
+    <div class="brand">HANDY TERMINAL <span>HT-2000</span></div>
+    <div class="lcd">
+      <div class="cebar"><span class="start">⊞ スタート</span><span id="cetime">10:00</span><span class="batt">▮▮▮▯</span></div>
+      <div class="apptitle" id="apptitle">店舗作業メニュー</div>
+      <div class="lcdbody" id="lcd"></div>
+      <div class="softkeys" id="softkeys"></div>
+    </div>
+    <div class="keys">
+      <div class="fkeys"><b data-k="F1">F1</b><b data-k="F2">F2</b><b class="scan" data-k="SCAN">SCAN</b><b data-k="F3">F3</b><b data-k="F4">F4</b></div>
+      <div class="pad"><b data-k="1">1</b><b data-k="2">2</b><b data-k="3">3</b><b data-k="4">4</b><b data-k="5">5</b><b data-k="6">6</b>
+        <b data-k="7">7</b><b data-k="8">8</b><b data-k="9">9</b><b data-k="CLR" class="clr">CLR</b><b data-k="0">0</b><b data-k="ENT" class="ent">ENT</b></div>
+    </div>
+  </div>
+  <a class="back-to-hub" href="/">司令塔へ</a>
+  <script type="module" src="/src/l1/handy.ts"></script>
+</body>
+</html>

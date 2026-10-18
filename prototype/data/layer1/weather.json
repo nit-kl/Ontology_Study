@@ -1,0 +1,20 @@
+[
+  {
+    "area": "East",
+    "area_name": "東部地域",
+    "date": "2026-10-23",
+    "max_celsius": 27
+  },
+  {
+    "area": "East",
+    "area_name": "東部地域",
+    "date": "2026-10-24",
+    "max_celsius": 31
+  },
+  {
+    "area": "East",
+    "area_name": "東部地域",
+    "date": "2026-08-07",
+    "max_celsius": 37
+  }
+]

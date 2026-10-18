@@ -1,0 +1,307 @@
+{
+  "store": "ST-014",
+  "meter": {
+    "id": "EM-014",
+    "contract_kw": 800
+  },
+  "zones": [
+    {
+      "id": "Z-1",
+      "name": "生鮮売場"
+    },
+    {
+      "id": "Z-2",
+      "name": "窓際の惣菜コーナー",
+      "window": true
+    },
+    {
+      "id": "Z-3",
+      "name": "日配・加工食品売場"
+    }
+  ],
+  "equipment": [
+    {
+      "id": "AHU-1",
+      "type": "AirHandlingUnit",
+      "name": "空調機1",
+      "feeds": "Z-1",
+      "kw": 60,
+      "kw_per_degree": 5,
+      "setpoint": 25,
+      "auto_min": 24,
+      "auto_max": 26
+    },
+    {
+      "id": "AHU-2",
+      "type": "AirHandlingUnit",
+      "name": "空調機2",
+      "feeds": "Z-2",
+      "kw": 60,
+      "kw_per_degree": 5,
+      "setpoint": 25,
+      "auto_min": 24,
+      "auto_max": 26
+    },
+    {
+      "id": "AHU-3",
+      "type": "AirHandlingUnit",
+      "name": "空調機3",
+      "feeds": "Z-3",
+      "kw": 60,
+      "kw_per_degree": 5,
+      "setpoint": 25,
+      "auto_min": 24,
+      "auto_max": 26
+    },
+    {
+      "id": "LZ-1",
+      "type": "LightingZone",
+      "name": "照明ゾーン1",
+      "zone": "Z-1",
+      "kw": 10,
+      "auto_max_dim": 0
+    },
+    {
+      "id": "LZ-2",
+      "type": "LightingZone",
+      "name": "照明ゾーン2",
+      "zone": "Z-3",
+      "kw": 10,
+      "auto_max_dim": 0
+    },
+    {
+      "id": "LZ-3",
+      "type": "LightingZone",
+      "name": "照明ゾーン3",
+      "zone": "Z-3",
+      "kw": 10,
+      "auto_max_dim": 0
+    },
+    {
+      "id": "LZ-4",
+      "type": "LightingZone",
+      "name": "照明ゾーン4（窓際）",
+      "zone": "Z-2",
+      "kw": 10,
+      "auto_max_dim": 30
+    },
+    {
+      "id": "FZ-01",
+      "type": "FreezerCase",
+      "name": "冷凍ケース",
+      "temp_zone": "Frozen",
+      "kw": 12,
+      "precool_kw": 16,
+      "setpoint": -20,
+      "auto_min": -24,
+      "auto_max": -18,
+      "auto_min_output": 50
+    },
+    {
+      "id": "RC-01",
+      "type": "RefrigeratedCase",
+      "name": "冷蔵ケース1",
+      "temp_zone": "Chilled",
+      "defrost_kw": 4,
+      "defrost": [
+        2,
+        8,
+        14,
+        20
+      ]
+    },
+    {
+      "id": "RC-02",
+      "type": "RefrigeratedCase",
+      "name": "冷蔵ケース2",
+      "temp_zone": "Chilled",
+      "defrost_kw": 4,
+      "defrost": [
+        2,
+        8,
+        14,
+        20
+      ]
+    },
+    {
+      "id": "RC-03",
+      "type": "RefrigeratedCase",
+      "name": "冷蔵ケース3（牛乳）",
+      "temp_zone": "Chilled",
+      "defrost_kw": 4,
+      "defrost": [
+        2,
+        8,
+        14,
+        20
+      ]
+    },
+    {
+      "id": "RC-04",
+      "type": "RefrigeratedCase",
+      "name": "冷蔵ケース4",
+      "temp_zone": "Chilled",
+      "defrost_kw": 4,
+      "defrost": [
+        2,
+        8,
+        14,
+        20
+      ]
+    },
+    {
+      "id": "RC-05",
+      "type": "RefrigeratedCase",
+      "name": "冷蔵ケース5",
+      "temp_zone": "Chilled",
+      "defrost_kw": 4,
+      "defrost": [
+        2,
+        8,
+        14,
+        20
+      ]
+    },
+    {
+      "id": "RC-06",
+      "type": "RefrigeratedCase",
+      "name": "冷蔵ケース6",
+      "temp_zone": "Chilled",
+      "defrost_kw": 4,
+      "defrost": [
+        2,
+        8,
+        14,
+        20
+      ]
+    },
+    {
+      "id": "RC-07",
+      "type": "RefrigeratedCase",
+      "name": "冷蔵ケース7",
+      "temp_zone": "Chilled",
+      "defrost_kw": 4,
+      "defrost": [
+        2,
+        8,
+        14,
+        20
+      ]
+    },
+    {
+      "id": "RC-08",
+      "type": "RefrigeratedCase",
+      "name": "冷蔵ケース8（おにぎり）",
+      "temp_zone": "Chilled",
+      "defrost_kw": 4,
+      "defrost": [
+        2,
+        8,
+        14,
+        20
+      ]
+    },
+    {
+      "id": "RC-09",
+      "type": "RefrigeratedCase",
+      "name": "冷蔵ケース9",
+      "temp_zone": "Chilled",
+      "defrost_kw": 4,
+      "defrost": [
+        2,
+        8,
+        14,
+        20
+      ]
+    },
+    {
+      "id": "RC-10",
+      "type": "RefrigeratedCase",
+      "name": "冷蔵ケース10（弁当）",
+      "temp_zone": "Chilled",
+      "defrost_kw": 4,
+      "defrost": [
+        2,
+        8,
+        14,
+        20
+      ]
+    },
+    {
+      "id": "RC-11",
+      "type": "RefrigeratedCase",
+      "name": "冷蔵ケース11",
+      "temp_zone": "Chilled",
+      "defrost_kw": 4,
+      "defrost": [
+        2,
+        8,
+        14,
+        20
+      ]
+    },
+    {
+      "id": "RC-12",
+      "type": "RefrigeratedCase",
+      "name": "冷蔵ケース12",
+      "temp_zone": "Chilled",
+      "defrost_kw": 4,
+      "defrost": [
+        2,
+        8,
+        14,
+        20
+      ]
+    }
+  ],
+  "sensors": [
+    {
+      "id": "ZT-1",
+      "kind": "zone",
+      "located_in": "Z-1"
+    },
+    {
+      "id": "ZT-2",
+      "kind": "zone",
+      "located_in": "Z-2"
+    },
+    {
+      "id": "ZT-3",
+      "kind": "zone",
+      "located_in": "Z-3"
+    },
+    {
+      "id": "FZ-01-T1",
+      "kind": "case",
+      "attached_to": "FZ-01"
+    },
+    {
+      "id": "RC-03-T1",
+      "kind": "case",
+      "attached_to": "RC-03"
+    },
+    {
+      "id": "RC-08-T1",
+      "kind": "case",
+      "attached_to": "RC-08"
+    },
+    {
+      "id": "OAT",
+      "kind": "outdoor"
+    }
+  ],
+  "initial": {
+    "time": "12:30",
+    "outside": 35,
+    "meter_kw": 745,
+    "sensors": {
+      "ZT-1": 25.4,
+      "ZT-2": 25.8,
+      "ZT-3": 25.3,
+      "FZ-01-T1": -20.0,
+      "RC-03-T1": 3.4,
+      "RC-08-T1": 3.6,
+      "OAT": 35.0
+    }
+  }
+}

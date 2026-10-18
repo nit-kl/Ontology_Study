@@ -1,0 +1,11 @@
+{
+  "ST-014": {
+    "R-9020": {"stock": 18, "sold_today": 10},
+    "R-9105": {"stock": 0, "sold_today": 0},
+    "R-3310": {"stock": 30, "sold_today": 4},
+    "R-3901": {"stock": 10, "sold_today": 1},
+    "R-5581": {"stock": 20, "sold_today": 3},
+    "R-6120": {"stock": 12, "sold_today": 2},
+    "R-8104": {"stock": 14, "sold_today": 2}
+  }
+}

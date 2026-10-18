@@ -1,0 +1,91 @@
+/* レイヤー5 業務アプリの共通デザイン。色は役割（トークン）で書き、ダークモードは同じ役割に別の値を当てる */
+:root {
+  color-scheme: light;
+  --bg: #f4f5f8;
+  --surface: #ffffff;
+  --surface-2: #f8f9fb;
+  --line: #e6e8ee;
+  --text: #0f1419;
+  --text-2: #4b5563;
+  --text-3: #8a93a3;
+  --brand: #4f46e5;
+  --brand-2: #7c3aed;
+  --brand-soft: #eef0ff;
+  --on-brand: #ffffff;
+  /* グラフ（基準パレット: 分類の1番目と2番目、順序の青の段） */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --band: #b7d3f6;
+  --tick: #52514e;
+  --chart-surface: #fcfcfb;
+  --div-pos: #2a78d6;   /* 分岐: 余る（青） */
+  --div-neg: #e34948;   /* 分岐: 足りない（赤） */
+  /* 状態（分類の色とは別に取ってある。必ずアイコンとラベルを添える） */
+  --good: #1f8f4e; --good-bg: #e6f6ed;
+  --warn: #a86400; --warn-bg: #fff4dc;
+  --crit: #c62f3e; --crit-bg: #fde9eb;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 6px 18px rgba(16, 24, 40, .06);
+  --radius: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #0d0f14;
+    --surface: #161a22;
+    --surface-2: #1c212b;
+    --line: #272d39;
+    --text: #eef0f4;
+    --text-2: #b5bccb;
+    --text-3: #7d8697;
+    --brand: #8b85ff;
+    --brand-2: #b18cff;
+    --brand-soft: #22234a;
+    --on-brand: #0d0f14;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --band: #184f95;
+    --tick: #c3c2b7;
+    --chart-surface: #1a1a19;
+    --div-pos: #3987e5;
+    --div-neg: #e66767;
+    --good: #5fd39a; --good-bg: #133324;
+    --warn: #ffc44d; --warn-bg: #3a2c0d;
+    --crit: #ff7a87; --crit-bg: #3d1a20;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.6 "Inter", "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: var(--brand); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; min-width: 0; }
+.card h2 { margin: 0 0 4px; font-size: 15px; letter-spacing: .01em; }
+.card .sub { color: var(--text-3); font-size: 12px; margin: 0 0 14px; }
+.eyebrow { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  background: var(--surface-2); color: var(--text-2); border: 1px solid var(--line); white-space: nowrap; }
+.pill.good { background: var(--good-bg); color: var(--good); border-color: transparent; }
+.pill.warn { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+.pill.crit { background: var(--crit-bg); color: var(--crit); border-color: transparent; }
+.pill.brand { background: var(--brand-soft); color: var(--brand); border-color: transparent; }
+.btn { font: inherit; font-weight: 600; border: 0; border-radius: 12px; padding: 12px 18px; cursor: pointer;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: var(--on-brand); transition: transform .12s, opacity .12s; }
+.btn:hover { transform: translateY(-1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn.ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--text-3); }
+.empty { color: var(--text-3); padding: 20px 0; text-align: center; }
+table.clean { border-collapse: collapse; width: 100%; font-size: 13px; }
+.clean th { text-align: left; font-size: 11px; color: var(--text-3); font-weight: 600; letter-spacing: .04em; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.clean td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.clean td.n, .clean th.n { text-align: right; font-variant-numeric: tabular-nums; }
+.clean tr:last-child td { border-bottom: 0; }
+.chip { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text-2); margin: 2px 4px 2px 0; }
+.tooltip { position: fixed; pointer-events: none; z-index: 50; background: var(--surface); color: var(--text); border: 1px solid var(--line);
+  box-shadow: var(--shadow); border-radius: 10px; padding: 8px 10px; font-size: 12px; line-height: 1.5; max-width: 260px; display: none; }
+.tooltip b { display: block; margin-bottom: 2px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--surface); padding: 10px 16px;
+  border-radius: 12px; box-shadow: var(--shadow); z-index: 60; font-weight: 600; }
+.back-to-hub { position: fixed; right: 12px; bottom: 10px; font-size: 11px; color: var(--text-3); text-decoration: none; }

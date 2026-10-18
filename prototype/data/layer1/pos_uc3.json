@@ -1,0 +1,57 @@
+{
+  "ST-014": {
+    "R-5581": {
+      "stock": 46,
+      "sold_today": 32,
+      "expiry": "2026-10-24",
+      "reserved_online": 6,
+      "shelf_missing": 2
+    },
+    "R-6120": {
+      "stock": 14,
+      "sold_today": 12,
+      "expiry": "2026-10-25",
+      "reserved_online": 0
+    }
+  },
+  "ST-031": {
+    "R-5581": {
+      "stock": 4,
+      "sold_today": 32,
+      "expiry": "2026-10-24",
+      "reserved_online": 0
+    },
+    "R-6120": {
+      "stock": 3,
+      "sold_today": 77,
+      "expiry": "2026-10-24",
+      "reserved_online": 0
+    },
+    "R-8104": {
+      "stock": 10,
+      "sold_today": 14,
+      "expiry": "2026-10-23",
+      "reserved_online": 0
+    }
+  },
+  "ST-040": {
+    "R-6120": {
+      "stock": 80,
+      "sold_today": 26,
+      "expiry": "2026-10-24",
+      "reserved_online": 0
+    },
+    "R-8104": {
+      "stock": 52,
+      "sold_today": 23,
+      "expiry": "2026-10-23",
+      "reserved_online": 0
+    },
+    "R-5581": {
+      "stock": 18,
+      "sold_today": 16,
+      "expiry": "2026-10-24",
+      "reserved_online": 2
+    }
+  }
+}

@@ -14,3 +14,4 @@
 | [docs/layer-3.md](docs/layer-3.md) | レイヤー3 ナレッジグラフ |
 | [docs/layer-4.md](docs/layer-4.md) | レイヤー4 AI推論とキネティック実行 |
 | [docs/layer-5.md](docs/layer-5.md) | レイヤー5 業務画面とガバナンス |
+| [prototype/](prototype/README.md) | UC1〜UC3 を手元で動かすデモ用プロトタイプ（rdflib / owlrl / pySHACL / FastAPI、画面は TypeScript） |

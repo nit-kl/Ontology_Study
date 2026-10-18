@@ -1,0 +1,114 @@
+@prefix ex:   <urn:example:ns:> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix odrl: <http://www.w3.org/ns/odrl/2/> .
+
+# レイヤー3 SHACL の承認の点検（再検証のときだけ使う）
+#
+# 承認が要る明細:
+#   ・SAP の推奨数があり、発注数が推奨数 × 1.5 を超える
+#   ・推奨数がない新商品で、似た商品の推奨数を超える（似た商品がなければ常に要る）
+# 承認が付いていても、承認した人が ODRL でその店の発注を承認できる人で、
+# 承認した数量以下でなければならない（数量を減らすのは承認なしでよい）。
+
+ex:approvalShapes a owl:Ontology ;
+    sh:declare [ sh:prefix "ex" ; sh:namespace "urn:example:ns:"^^xsd:anyURI ] ,
+               [ sh:prefix "odrl" ; sh:namespace "http://www.w3.org/ns/odrl/2/"^^xsd:anyURI ] .
+
+ex:ApprovalShape a sh:NodeShape ;
+    sh:targetClass ex:OrderLine ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "承認" ;
+        sh:message "{?reason}。その店の発注を承認できる人の承認が要る" ;
+        sh:prefixes ex:approvalShapes ;
+        sh:select """
+            SELECT $this ?reason WHERE {
+                $this ex:quantity ?q ; ex:product ?p ; ex:plan ?plan .
+                ?plan ex:store ?s ; ex:deliveryDate ?d .
+                ex:OrderPolicy ex:approvalRatio ?ratio .
+                OPTIONAL {
+                    ?rec a ex:Recommendation ; ex:store ?s ; ex:product ?p ; ex:date ?d ; ex:quantity ?r .
+                }
+                OPTIONAL {
+                    $this ex:referenceProduct ?ref .
+                    ?rr a ex:Recommendation ; ex:store ?s ; ex:product ?ref ; ex:date ?d ; ex:quantity ?refR .
+                }
+                BIND (
+                    IF(BOUND(?r),
+                       IF(?q > ?r * ?ratio, CONCAT("推奨数 ", STR(?r), " の ", STR(?ratio), " 倍を超える（", STR(?q), "）"), ""),
+                       IF(BOUND(?refR),
+                          IF(?q > ?refR, CONCAT("新商品で、似た商品の推奨数 ", STR(?refR), " を超える（", STR(?q), "）"), ""),
+                          "推奨数も似た商品もない"))
+                    AS ?reason)
+                FILTER (?reason != "")
+                FILTER NOT EXISTS {
+                    $this ex:approvedBy ?who ; ex:approvedQuantity ?aq .
+                    FILTER (?q <= ?aq)
+                    ?perm a odrl:Permission ; odrl:assignee ?who ; odrl:action ex:approveOrder ; odrl:target ?s .
+                }
+            }""" ] .
+
+# ---- UC2 設備操作の範囲 -------------------------------------------------------
+# 自動で動かしてよい範囲（台帳の autoMin〜autoMax、調光の上限、出力の下限）を外れる設定には、
+# その店の設備の調整を承認できる人の承認が要る。元に戻す操作（ex:revert true）は安全側なのでいつでもよい。
+
+ex:EquipmentApprovalShape a sh:NodeShape ;
+    sh:targetClass ex:EquipmentSetting ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "設備操作の範囲" ;
+        sh:message "{?reason}。店長の承認が要る" ;
+        sh:prefixes ex:approvalShapes ;
+        sh:select """
+            SELECT $this ?reason WHERE {
+                $this ex:equipment ?eq .
+                ?eq ex:inStore ?s .
+                FILTER NOT EXISTS { $this ex:revert true }
+                {
+                    $this ex:setpoint ?v . ?eq ex:autoMin ?lo ; ex:autoMax ?hi .
+                    FILTER (?v < ?lo || ?v > ?hi)
+                    BIND (CONCAT("設定 ", STR(?v), " は自動の範囲 ", STR(?lo), "〜", STR(?hi), " の外") AS ?reason)
+                } UNION {
+                    $this ex:dimPercent ?v . ?eq ex:autoMaxDim ?hi .
+                    FILTER (?v > ?hi)
+                    BIND (CONCAT("調光 ", STR(?v), "% は自動の上限 ", STR(?hi), "% を超える") AS ?reason)
+                } UNION {
+                    $this ex:dimPercent ?v .
+                    FILTER NOT EXISTS { ?eq ex:autoMaxDim ?any }
+                    BIND ("このゾーンの照明は自動で調光しない" AS ?reason)
+                } UNION {
+                    $this ex:outputPercent ?v . ?eq ex:autoMinOutput ?lo .
+                    FILTER (?v < ?lo)
+                    BIND (CONCAT("出力 ", STR(?v), "% は自動の下限 ", STR(?lo), "% を下回る") AS ?reason)
+                }
+                FILTER NOT EXISTS {
+                    $this ex:approvedBy ?who .
+                    ?perm a odrl:Permission ; odrl:assignee ?who ; odrl:action ex:approveEquipment ; odrl:target ?s .
+                }
+            }""" ] .
+
+# ---- UC3 上限を超える店間移動 ---------------------------------------------------
+# 50個以下かつ15,000円以下は承認なし。超えるときは、受け入れる店の店長の承認が要る。減らすのは承認なしでよい。
+
+ex:TransferApprovalShape a sh:NodeShape ;
+    sh:targetClass ex:Transfer ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "承認" ;
+        sh:message "{?reason}。受け入れる店の店長の承認が要る" ;
+        sh:prefixes ex:approvalShapes ;
+        sh:select """
+            SELECT $this ?reason WHERE {
+                $this ex:quantity ?q ; ex:product/ex:price ?price ; ex:to ?s .
+                ex:TransferPolicy ex:maxAutoUnits ?maxU ; ex:maxAutoAmount ?maxA .
+                BIND (?q * ?price AS ?amount)
+                FILTER (?q > ?maxU || ?amount > ?maxA)
+                BIND (CONCAT(STR(?q), "個・", STR(?amount), "円で、上限（", STR(?maxU), "個かつ", STR(?maxA), "円）を超える") AS ?reason)
+                FILTER NOT EXISTS {
+                    $this ex:approvedBy ?who ; ex:approvedQuantity ?aq .
+                    FILTER (?q <= ?aq)
+                    ?perm a odrl:Permission ; odrl:assignee ?who ; odrl:action ex:approveTransfer ; odrl:target ?s .
+                }
+            }""" ] .

@@ -1,0 +1,74 @@
+@prefix ex:   <urn:example:ns:> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+
+# レイヤー3 SHACL の定義（UC2 設備の調整）。事前検証と確定の両方で使う。
+# 設備操作の範囲（外なら店長の承認）は approval_shapes.ttl にある。
+
+ex:equipmentShapes a owl:Ontology ;
+    sh:declare [ sh:prefix "ex" ; sh:namespace "urn:example:ns:"^^xsd:anyURI ] .
+
+ex:EquipmentSettingShape a sh:NodeShape ;
+    sh:targetClass ex:EquipmentSetting ;
+
+    # 動かす設備は、オントロジーが「ピークに動かせる設備」と推論したものに限る
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "動かせる設備" ;
+        sh:message "{?e} はピークに動かせる設備ではない（動かせる幅が台帳にない）" ;
+        sh:prefixes ex:equipmentShapes ;
+        sh:select """
+            SELECT $this ?e WHERE {
+                $this ex:equipment ?eq .
+                FILTER NOT EXISTS { ?eq a ex:PeakAdjustable }
+                BIND (STRAFTER(STR(?eq), "urn:example:equip:") AS ?e)
+            }""" ] ;
+
+    # 霜取りの間隔: 前の霜取りから8時間以内（日をまたぐ間隔も見る）
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "霜取りの間隔" ;
+        sh:message "霜取りの間隔が {?gap} 時間あく（上限 {?max} 時間）" ;
+        sh:prefixes ex:equipmentShapes ;
+        sh:select """
+            SELECT $this ?gap ?max WHERE {
+                ex:ComfortPolicy ex:defrostMaxGapHours ?max .
+                {
+                    $this ex:defrostAt ?a , ?b .
+                    FILTER (?b > ?a)
+                    FILTER NOT EXISTS { $this ex:defrostAt ?c FILTER (?c > ?a && ?c < ?b) }
+                    BIND (?b - ?a AS ?gap)
+                } UNION {
+                    $this ex:defrostAt ?first , ?last .
+                    FILTER NOT EXISTS { $this ex:defrostAt ?x FILTER (?x < ?first) }
+                    FILTER NOT EXISTS { $this ex:defrostAt ?y FILTER (?y > ?last) }
+                    BIND (24 - ?last + ?first AS ?gap)
+                }
+                FILTER (?gap > ?max)
+            }""" ] ;
+
+    # 食品安全（見込み）: ケースの見込みの最高温度が、中の商品の温度帯の上限以下
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "食品安全" ;
+        sh:message "見込みの庫内温度 {?t}℃ が温度帯の上限 {?max}℃ を超える" ;
+        sh:prefixes ex:equipmentShapes ;
+        sh:select """
+            SELECT $this ?t ?max WHERE {
+                $this ex:predictedCaseMax ?t ; ex:equipment/ex:tempZone/ex:maxCelsius ?max .
+                FILTER (?t > ?max)
+            }""" ] ;
+
+    # 売場の快適性（見込み）: 受け持つ区画の見込みの最高温度が27℃以下
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "売場の快適性" ;
+        sh:message "見込みの売場の温度 {?t}℃ が上限 {?max}℃ を超える" ;
+        sh:prefixes ex:equipmentShapes ;
+        sh:select """
+            SELECT $this ?t ?max WHERE {
+                $this ex:predictedZoneMax ?t .
+                ex:ComfortPolicy ex:maxZoneCelsius ?max .
+                FILTER (?t > ?max)
+            }""" ] .

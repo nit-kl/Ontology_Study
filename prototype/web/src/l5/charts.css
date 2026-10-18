@@ -1,0 +1,36 @@
+/* レイヤー5 のグラフ（色は modern.css の役割を使う） */
+.rangechart { width: 100%; height: auto; display: block; }
+.rangechart .hit { fill: transparent; }
+.rangechart .row:hover .hit { fill: var(--surface-2); }
+.rangechart .grid { stroke: var(--line); stroke-width: 1; }
+.rangechart .baseline { stroke: var(--text-3); stroke-width: 1; }
+.rangechart .axis { fill: var(--text-3); font-size: 11px; }
+.rangechart .label { fill: var(--text-2); font-size: 12px; }
+.rangechart .value { fill: var(--text); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rangechart .band { fill: var(--band); }
+.rangechart .bar { fill: var(--series-1); stroke: var(--chart-surface); stroke-width: 2; paint-order: stroke; }
+.rangechart .tick { stroke: var(--tick); stroke-width: 2; stroke-linecap: round; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); margin: 0 0 8px; }
+.legend .sw { display: inline-block; vertical-align: middle; margin-right: 6px; }
+.legend .sw.bar { width: 16px; height: 8px; border-radius: 0 4px 4px 0; background: var(--series-1); }
+.legend .sw.band { width: 16px; height: 14px; border-radius: 4px; background: var(--band); }
+.legend .sw.tick { width: 2px; height: 14px; background: var(--tick); border-radius: 1px; }
+.linechart { width: 100%; height: auto; display: block; }
+.linechart .grid { stroke: var(--line); }
+.linechart .axis { fill: var(--text-3); font-size: 11px; }
+.linechart .band { fill: color-mix(in srgb, var(--warn) 10%, transparent); }
+.linechart .ref { stroke: var(--tick); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.linechart .reflabel { fill: var(--text-2); font-size: 11px; font-weight: 600; }
+.linechart .line { fill: none; stroke: var(--series-1); stroke-width: 2; stroke-linejoin: round; }
+.linechart .endpt { fill: var(--series-1); stroke: var(--chart-surface); stroke-width: 2; }
+.linechart .cross { stroke: var(--text-3); stroke-width: 1; }
+.divchart { width: 100%; height: auto; display: block; }
+.divchart .hit { fill: transparent; }
+.divchart .row:hover .hit { fill: var(--surface-2); }
+.divchart .mid { stroke: var(--text-3); }
+.divchart .axis { fill: var(--text-3); font-size: 11px; }
+.divchart .label { fill: var(--text-2); font-size: 12px; }
+.divchart .value { fill: var(--text); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.divchart .pos { fill: var(--div-pos); }
+.divchart .neg { fill: var(--div-neg); }
+.linecap { font-size: 12px; font-weight: 600; color: var(--text-2); margin: 0 0 2px; }

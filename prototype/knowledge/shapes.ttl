@@ -1,0 +1,94 @@
+@prefix ex:   <urn:example:ns:> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# レイヤー3 SHACL の定義（事前検証と再検証の両方で使う点検）
+# 承認の点検は approval_shapes.ttl に分けてあり、再検証のときだけ足す。
+
+ex:shapes a owl:Ontology ;
+    sh:declare [ sh:prefix "ex" ; sh:namespace "urn:example:ns:"^^xsd:anyURI ] .
+
+ex:OrderLineShape a sh:NodeShape ;
+    sh:targetClass ex:OrderLine ;
+    rdfs:label "発注の明細" ;
+
+    # 形の点検: 数量は0以上の整数がちょうど1つ、商品がちょうど1つ
+    sh:property [
+        sh:path ex:quantity ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:name "数量" ; sh:message "数量は0以上の整数が1つ必要" ] ;
+    sh:property [
+        sh:path ex:product ; sh:class ex:Product ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:name "商品" ; sh:message "商品がない、または商品マスタにない" ] ;
+
+    # 発注の単位: ケースの倍数
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "発注の単位" ;
+        sh:message "発注の単位の倍数ではない（{?q} は {?case} の倍数でない）" ;
+        sh:prefixes ex:shapes ;
+        sh:select """
+            SELECT $this ?q ?case WHERE {
+                $this ex:quantity ?q ; ex:product ?p .
+                ?p ex:caseSize ?case .
+                FILTER (FLOOR(?q / ?case) * ?case != ?q)
+            }""" ] ;
+
+    # 置き場の容量: 明日の朝の在庫の見込み ＋ 発注数 ≤ 棚割の置ける数
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "置き場の容量" ;
+        sh:message "置き場に入らない（朝の在庫 {?m} ＋ 発注 {?q} = {?total}。{?equip} の置ける数は {?cap}）" ;
+        sh:prefixes ex:shapes ;
+        sh:select """
+            SELECT $this ?q ?m ?total ?cap ?equip WHERE {
+                $this ex:quantity ?q ; ex:expectedMorningStock ?m ; ex:product ?p ; ex:plan/ex:store ?s .
+                ?slot a ex:PlanogramSlot ; ex:store ?s ; ex:product ?p ; ex:capacity ?cap ; ex:equipment ?e .
+                BIND (STRAFTER(STR(?e), "urn:example:equip:") AS ?equip)
+                BIND (?m + ?q AS ?total)
+                FILTER (?total > ?cap)
+            }""" ] ;
+
+    # 予測の範囲: 期限が3日以内の商品は、予測の80%の幅の上端まで
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "予測の範囲" ;
+        sh:message "期限が短いのに予測の幅の上端を超えている（発注 {?q}、上端 {?u}）" ;
+        sh:prefixes ex:shapes ;
+        sh:select """
+            SELECT $this ?q ?u WHERE {
+                $this ex:quantity ?q ; ex:product ?p ; ex:forecastUpper ?u .
+                ?p ex:shelfLifeDays ?d .
+                FILTER (?d <= 3 && ?q > ?u)
+            }""" ] ;
+
+    # 予測の出どころ: 予測を使った明細は、運用中のモデルの版の予測であること
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "予測の出どころ" ;
+        sh:message "予測が運用中のモデルの版のものではない（{?mv}）" ;
+        sh:prefixes ex:shapes ;
+        sh:select """
+            SELECT $this ?mv WHERE {
+                $this ex:forecastModel ?mv .
+                FILTER NOT EXISTS { ?mv ex:status ex:Active }
+            }""" ] ;
+
+    # 似た商品: AI が「似ている」とした商品が、本当にオントロジーの条件に合うか
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "似た商品" ;
+        sh:message "{?ref} は似た商品の条件（同じ区分・温度帯、価格の差が{?limit}円以内、履歴あり）に合わない" ;
+        sh:prefixes ex:shapes ;
+        sh:select """
+            SELECT $this ?ref ?limit WHERE {
+                $this ex:product ?p ; ex:referenceProduct ?ref .
+                ex:OrderPolicy ex:similarPriceDiff ?limit .
+                FILTER NOT EXISTS {
+                    ?p ex:category ?c ; ex:tempZone ?t ; ex:price ?pp .
+                    ?ref ex:category ?c ; ex:tempZone ?t ; ex:price ?rp ; ex:hasSalesHistory true .
+                    FILTER (ABS(?pp - ?rp) <= ?limit)
+                }
+            }""" ] .

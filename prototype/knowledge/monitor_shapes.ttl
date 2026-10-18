@@ -1,0 +1,40 @@
+@prefix ex:   <urn:example:ns:> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+
+# レイヤー3 SHACL の見張りの規則（UC2 の実行中、KINETIC が5分ごとに頼む）。
+# ストアにある各センサーの最新の観測（レイヤー2 がストリームで差し替える）を点検する。
+
+ex:monitorShapes a owl:Ontology ;
+    sh:declare [ sh:prefix "ex" ; sh:namespace "urn:example:ns:"^^xsd:anyURI ] .
+
+ex:ZoneSensorShape a sh:NodeShape ;
+    sh:targetClass ex:ZoneTemperatureSensor ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "売場の快適性" ;
+        sh:message "{?v}℃ が上限 {?max}℃ を超えた。受け持つ空調機: {?ahu}" ;
+        sh:prefixes ex:monitorShapes ;
+        sh:select """
+            SELECT $this ?v ?max ?ahu WHERE {
+                $this ex:latestValue ?v ; ex:servedBy ?a .
+                ex:ComfortPolicy ex:maxZoneCelsius ?max .
+                FILTER (?v > ?max)
+                BIND (STRAFTER(STR(?a), "urn:example:equip:") AS ?ahu)
+            }""" ] .
+
+ex:CaseSensorShape a sh:NodeShape ;
+    sh:targetClass ex:CaseTemperatureSensor ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:name "食品安全" ;
+        sh:message "庫内 {?v}℃ が温度帯の上限 {?max}℃ を超えた（{?eq}）" ;
+        sh:prefixes ex:monitorShapes ;
+        sh:select """
+            SELECT $this ?v ?max ?eq WHERE {
+                $this ex:latestValue ?v ; ex:attachedTo ?e .
+                ?e ex:tempZone/ex:maxCelsius ?max .
+                FILTER (?v > ?max)
+                BIND (STRAFTER(STR(?e), "urn:example:equip:") AS ?eq)
+            }""" ] .

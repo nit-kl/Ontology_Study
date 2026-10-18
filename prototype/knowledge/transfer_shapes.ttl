@@ -1,0 +1,79 @@
+@prefix ex:   <urn:example:ns:> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+
+# レイヤー3 SHACL の定義（UC3 店間移動と見切り）。事前検証と確定の両方で使う。
+# 上限を超える店間移動の承認は approval_shapes.ttl にある。
+
+ex:transferShapes a owl:Ontology ;
+    sh:declare [ sh:prefix "ex" ; sh:namespace "urn:example:ns:"^^xsd:anyURI ] ,
+               [ sh:prefix "geo" ; sh:namespace "http://www.opengis.net/ont/geosparql#"^^xsd:anyURI ] ,
+               [ sh:prefix "geof" ; sh:namespace "http://www.opengis.net/def/function/geosparql/"^^xsd:anyURI ] ,
+               [ sh:prefix "uom" ; sh:namespace "http://www.opengis.net/def/uom/OGC/1.0/"^^xsd:anyURI ] .
+
+ex:TransferShape a sh:NodeShape ;
+    sh:targetClass ex:Transfer ;
+    sh:property [ sh:path ex:quantity ; sh:datatype xsd:integer ; sh:minInclusive 1 ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:name "数量" ; sh:message "移す数量は1以上の整数が1つ必要" ] ;
+
+    sh:sparql [ a sh:SPARQLConstraint ; sh:name "在庫移動: 温度帯" ;
+        sh:message "商品の温度帯と車の温度帯が合わない" ; sh:prefixes ex:transferShapes ;
+        sh:select """SELECT $this WHERE {
+            $this ex:product/ex:tempZone ?pz ; ex:vehicle/ex:tempZone ?vz . FILTER (?pz != ?vz) }""" ] ;
+
+    sh:sparql [ a sh:SPARQLConstraint ; sh:name "在庫移動: 期限" ;
+        sh:message "期限（{?exp}）まで1日以上ない商品は移さない" ; sh:prefixes ex:transferShapes ;
+        sh:select """SELECT $this ?exp WHERE {
+            $this ex:expiry ?exp ; ex:transferDate ?d . FILTER (?exp <= ?d) }""" ] ;
+
+    sh:sparql [ a sh:SPARQLConstraint ; sh:name "在庫移動: 保冷時間" ;
+        sh:message "輸送 {?m} 分が車の保冷時間 {?h} 時間を超える" ; sh:prefixes ex:transferShapes ;
+        sh:select """SELECT $this ?m ?h WHERE {
+            $this ex:vehicle ?v . ?v ex:transitMinutes ?m ; ex:coldHours ?h . FILTER (?m > ?h * 60) }""" ] ;
+
+    sh:sparql [ a sh:SPARQLConstraint ; sh:name "在庫移動: 車の空き" ;
+        sh:message "{?q} 個は車の空き {?free} 個に入らない" ; sh:prefixes ex:transferShapes ;
+        sh:select """SELECT $this ?q ?free WHERE {
+            $this ex:quantity ?q ; ex:vehicle/ex:freeUnits ?free . FILTER (?q > ?free) }""" ] ;
+
+    sh:sparql [ a sh:SPARQLConstraint ; sh:name "在庫移動: 引当分" ;
+        sh:message "送り出す店にネットスーパーの引当分 {?r} が残らない（{?stock} − {?q}）" ; sh:prefixes ex:transferShapes ;
+        sh:select """SELECT $this ?r ?stock ?q WHERE {
+            $this ex:quantity ?q ; ex:sourceStock ?stock ; ex:sourceReserved ?r . FILTER (?stock - ?q < ?r) }""" ] ;
+
+    # 帰り便: 送り出す店のネットスーパー配送車で運ぶ（新しい便は出さない）
+    sh:sparql [ a sh:SPARQLConstraint ; sh:name "在庫移動: 帰り便" ;
+        sh:message "{?v} は送り出す店（{?src}）の配送車ではない" ; sh:prefixes ex:transferShapes ;
+        sh:select """SELECT $this ?v ?src WHERE {
+            $this ex:vehicle ?veh ; ex:from ?from . ?veh ex:home ?home . FILTER (?home != ?from)
+            BIND (STRAFTER(STR(?veh), "urn:example:vehicle:") AS ?v)
+            BIND (STRAFTER(STR(?from), "urn:example:store:") AS ?src) }""" ] ;
+
+    # 帰り便: 車の今夜のルートが、受け入れる店から方針の距離以内を通る（GeoSPARQL）
+    sh:sparql [ a sh:SPARQLConstraint ; sh:name "在庫移動: 帰り便" ;
+        sh:message "車のルートが受け入れる店から {?km}km 離れている（方針 {?r}km 以内）" ; sh:prefixes ex:transferShapes ;
+        sh:select """SELECT $this ?km ?r WHERE {
+            $this ex:vehicle/geo:hasGeometry/geo:asWKT ?route ; ex:to/geo:hasGeometry/geo:asWKT ?pt .
+            ex:TransferPolicy ex:routeRadiusKm ?r .
+            BIND (geof:distance(?pt, ?route, uom:kilometre) AS ?km)
+            FILTER (?km > ?r) }""" ] .
+
+ex:MarkdownStepShape a sh:NodeShape ;
+    sh:targetClass ex:MarkdownStep ;
+
+    sh:sparql [ a sh:SPARQLConstraint ; sh:name "見切りの値引上限" ;
+        sh:message "期限が今日の商品だけ見切る（期限 {?exp}）" ; sh:prefixes ex:transferShapes ;
+        sh:select """SELECT $this ?exp WHERE {
+            $this ex:markdown ?m . ?m ex:expiry ?exp ; ex:date ?d . FILTER (?exp != ?d) }""" ] ;
+
+    sh:sparql [ a sh:SPARQLConstraint ; sh:name "見切りの値引上限" ;
+        sh:message "値引き {?pct}% は上限 {?max}% を超える" ; sh:prefixes ex:transferShapes ;
+        sh:select """SELECT $this ?pct ?max WHERE {
+            $this ex:discount ?pct . ex:MarkdownPolicy ex:maxDiscount ?max . FILTER (?pct > ?max) }""" ] ;
+
+    sh:sparql [ a sh:SPARQLConstraint ; sh:name "見切りの値引上限" ;
+        sh:message "閉店（{?close}時）の {?h} 時間前より早く値引きしない（{?from}時から）" ; sh:prefixes ex:transferShapes ;
+        sh:select """SELECT $this ?close ?h ?from WHERE {
+            $this ex:fromHour ?from ; ex:markdown/ex:store/ex:closeHour ?close .
+            ex:MarkdownPolicy ex:hoursBeforeClose ?h . FILTER (?from < ?close - ?h) }""" ] .

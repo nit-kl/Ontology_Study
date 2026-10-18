@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>コントロールタワー</title>
+</head>
+<body>
+  <header class="top">
+    <div class="brandmark">◆</div>
+    <div>
+      <div class="eyebrow">サプライチェーン・コントロールタワー</div>
+      <h1 id="headline">-</h1>
+    </div>
+    <div class="live"><span class="dot"></span><span id="now">--:--</span></div>
+  </header>
+  <main class="dash">
+    <section class="kpis" id="kpis"></section>
+    <section class="card stepper" id="stepper"></section>
+    <section class="card map"><h2 id="leftTitle"></h2><p class="sub" id="leftSub"></p><div id="map"></div></section>
+    <section class="card chart">
+      <div class="cardhead"><div><h2 id="rightTitle"></h2><p class="sub" id="rightSub"></p></div>
+        <div class="seg"><button data-v="chart" class="on">グラフ</button><button data-v="table">表</button></div></div>
+      <div id="chart"></div>
+    </section>
+    <section class="card feed"><h2>動き</h2><p class="sub">各層の出来事（新しい順）</p><div id="feed"></div></section>
+  </main>
+  <a class="back-to-hub" href="/">司令塔へ</a>
+  <script type="module" src="/src/l5/tower.ts"></script>
+</body>
+</html>

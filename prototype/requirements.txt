@@ -1,0 +1,8 @@
+rdflib==7.6.0
+pyshacl==0.40.1
+owlrl==7.6.2
+fastapi==0.143.3
+uvicorn==0.54.0
+# テスト用
+pytest==9.1.1
+httpx==0.28.1

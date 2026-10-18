@@ -1,0 +1,51 @@
+@prefix ex:     <urn:example:ns:> .
+@prefix store:  <urn:example:store:> .
+@prefix person: <urn:example:person:> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+
+# レイヤー5 の権限の設計者が書く ODRL の権限。レイヤー3 のストアの権限の Named Graph に置く。
+
+ex:approvalPolicy a odrl:Set ;
+    odrl:permission ex:perm-ST014 , ex:perm-ST031 , ex:perm-ST014-equip , ex:perm-ST031-transfer , ex:perm-ST014-transfer , ex:perm-ST040-transfer .
+
+ex:perm-ST014 a odrl:Permission ;
+    odrl:assignee person:manager-ST014 ;
+    odrl:action   ex:approveOrder ;
+    odrl:target   store:ST-014 ;
+    rdfs:comment  "1号店の店長は、1号店の発注を承認できる" .
+
+ex:perm-ST031 a odrl:Permission ;
+    odrl:assignee person:manager-ST031 ;
+    odrl:action   ex:approveOrder ;
+    odrl:target   store:ST-031 ;
+    rdfs:comment  "2号店の店長は、2号店の発注を承認できる" .
+
+ex:perm-ST014-equip a odrl:Permission ;
+    odrl:assignee person:manager-ST014 ;
+    odrl:action   ex:approveEquipment ;
+    odrl:target   store:ST-014 ;
+    rdfs:comment  "1号店の店長は、1号店の方針の範囲外の設備の調整を承認できる" .
+
+ex:perm-ST031-transfer a odrl:Permission ;
+    odrl:assignee person:manager-ST031 ;
+    odrl:action   ex:approveTransfer ;
+    odrl:target   store:ST-031 ;
+    rdfs:comment  "2号店の店長は、2号店が受け入れる店間移動を承認できる" .
+
+ex:perm-ST014-transfer a odrl:Permission ;
+    odrl:assignee person:manager-ST014 ;
+    odrl:action   ex:approveTransfer ;
+    odrl:target   store:ST-014 ;
+    rdfs:comment  "1号店の店長は、1号店が受け入れる店間移動を承認できる" .
+
+ex:perm-ST040-transfer a odrl:Permission ;
+    odrl:assignee person:manager-ST040 ;
+    odrl:action   ex:approveTransfer ;
+    odrl:target   store:ST-040 ;
+    rdfs:comment  "3号店の店長は、3号店が受け入れる店間移動を承認できる" .
+
+person:manager-ST014 rdfs:label "1号店の店長" .
+person:manager-ST040 rdfs:label "3号店の店長" .
+person:manager-ST031 rdfs:label "2号店の店長" .
+person:buyer-01      rdfs:label "本部のバイヤー" .

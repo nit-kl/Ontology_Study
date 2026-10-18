@@ -1,0 +1,162 @@
+@prefix ex:   <urn:example:ns:> .
+@prefix cat:  <urn:example:cat:> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+
+# レイヤー3 オントロジーの定義（人が一度書く文）
+
+<urn:example:ontology> a owl:Ontology ;
+    rdfs:label "小売グループのオントロジー（デモ）" .
+
+# ---- 種類 ----------------------------------------------------------------
+
+ex:Product     a owl:Class ; rdfs:label "商品" .
+ex:UnifiedSKU  a owl:Class ; rdfs:label "卸売事業と小売事業で共通の商品" .
+ex:Site        a owl:Class ; rdfs:label "拠点" .
+ex:Store       a owl:Class ; rdfs:subClassOf ex:Site ; rdfs:label "店" .
+ex:DistributionCenter a owl:Class ; rdfs:subClassOf ex:Site ; rdfs:label "配送センター" .
+ex:Equipment   a owl:Class ; rdfs:label "設備" .
+ex:Event       a owl:Class ; rdfs:label "地域のイベント" .
+ex:EventType   a owl:Class ; rdfs:label "イベントの種類" .
+ex:Condition   a owl:Class ; rdfs:label "明日の事情（イベントの種類や暑い日）" .
+ex:EventType   rdfs:subClassOf ex:Condition .
+ex:OrderPlan   a owl:Class ; rdfs:label "発注計画" .
+ex:OrderLine   a owl:Class ; rdfs:label "発注計画の明細" .
+ex:ForecastModel a owl:Class ; rdfs:label "需要予測モデルの版" .
+
+# ---- 商品と UnifiedSKU ----------------------------------------------------
+
+ex:unifiedSku a owl:ObjectProperty ; rdfs:domain ex:Product ; rdfs:range ex:UnifiedSKU ;
+    rdfs:label "同じ商品" .
+ex:skuMember  a owl:ObjectProperty ; owl:inverseOf ex:unifiedSku .
+# 同じ UnifiedSKU を指す商品どうし（卸側コード ⇔ 小売側コード）は「同じ商品のコード」
+ex:sameProductCode a owl:ObjectProperty , owl:SymmetricProperty ;
+    owl:propertyChainAxiom ( ex:unifiedSku ex:skuMember ) ;
+    rdfs:label "同じ商品の別コード" .
+
+ex:category a owl:ObjectProperty ; rdfs:range skos:Concept ; rdfs:label "区分" .
+# 区分とその上の区分すべて
+ex:inCategoryTree a owl:ObjectProperty ; rdfs:label "区分（上の区分を含む）" .
+ex:category rdfs:subPropertyOf ex:inCategoryTree .
+ex:inCategoryTree owl:propertyChainAxiom ( ex:category skos:broaderTransitive ) .
+skos:broader rdfs:subPropertyOf skos:broaderTransitive .
+skos:broaderTransitive a owl:TransitiveProperty .
+
+# ---- 明日の事情に関わる商品 ---------------------------------------------------
+
+ex:boostsCategory a owl:ObjectProperty ; rdfs:domain ex:Condition ; rdfs:range skos:Concept ;
+    rdfs:label "よく売れる区分" .
+ex:boostedByCondition a owl:ObjectProperty ; owl:inverseOf ex:boostsCategory .
+ex:eventType a owl:ObjectProperty ; rdfs:domain ex:Event ; rdfs:range ex:EventType .
+ex:hasEventInstance a owl:ObjectProperty ; owl:inverseOf ex:eventType .
+
+# 商品 → 区分（上の区分を含む）→ その区分がよく売れる事情
+ex:sensitiveTo a owl:ObjectProperty ;
+    owl:propertyChainAxiom ( ex:inCategoryTree ex:boostedByCondition ) ;
+    rdfs:label "売れ行きが左右される事情" .
+# 商品 → 事情（イベントの種類）→ その種類のイベント
+ex:boostedByEvent a owl:ObjectProperty ;
+    owl:propertyChainAxiom ( ex:sensitiveTo ex:hasEventInstance ) ;
+    rdfs:label "売れ行きが伸びるイベント" .
+
+ex:SportsWatching a ex:EventType ; rdfs:label "スポーツ観戦" ;
+    ex:boostsCategory cat:onigiri , cat:sportsDrink , cat:ice .
+ex:Concert a ex:EventType ; rdfs:label "コンサート" ;
+    ex:boostsCategory cat:beverage .
+ex:HotDay a ex:Condition ; rdfs:label "暑い日" ;
+    ex:boostsCategory cat:sportsDrink , cat:ice .
+
+# ---- 区分（SKOS） --------------------------------------------------------
+
+cat:scheme a skos:ConceptScheme ; skos:prefLabel "商品の区分" .
+cat:daily       a skos:Concept ; skos:inScheme cat:scheme ; skos:prefLabel "日配品" .
+cat:deli        a skos:Concept ; skos:inScheme cat:scheme ; skos:prefLabel "惣菜" .
+cat:beverage    a skos:Concept ; skos:inScheme cat:scheme ; skos:prefLabel "飲料" .
+cat:frozen      a skos:Concept ; skos:inScheme cat:scheme ; skos:prefLabel "冷凍食品" .
+cat:onigiri     a skos:Concept ; skos:inScheme cat:scheme ; skos:prefLabel "おにぎり" ; skos:broader cat:daily .
+cat:milk        a skos:Concept ; skos:inScheme cat:scheme ; skos:prefLabel "牛乳の区分" ; skos:broader cat:daily .
+cat:unadjusted  a skos:Concept ; skos:inScheme cat:scheme ; skos:prefLabel "無調整" ; skos:broader cat:milk .
+cat:yogurt      a skos:Concept ; skos:inScheme cat:scheme ; skos:prefLabel "ヨーグルト" ; skos:broader cat:daily .
+cat:bento       a skos:Concept ; skos:inScheme cat:scheme ; skos:prefLabel "弁当" ; skos:broader cat:deli .
+cat:sportsDrink a skos:Concept ; skos:inScheme cat:scheme ; skos:prefLabel "スポーツドリンク" ; skos:broader cat:beverage .
+cat:ice         a skos:Concept ; skos:inScheme cat:scheme ; skos:prefLabel "氷" ; skos:broader cat:frozen .
+
+# ---- 温度帯 --------------------------------------------------------------
+
+ex:Chilled a skos:Concept ; skos:prefLabel "冷蔵" ; ex:minCelsius 0 ; ex:maxCelsius 5 .
+ex:Frozen  a skos:Concept ; skos:prefLabel "冷凍" ; ex:maxCelsius -18 .
+ex:Ambient a skos:Concept ; skos:prefLabel "常温" .
+
+# ---- 発注の方針（AI が提案を作るときに読む） ---------------------------------------
+
+ex:OrderPolicy a ex:Policy ; rdfs:label "発注の方針" ;
+    ex:nearbyRadiusKm 2 ;
+    ex:minAttendance 10000 ;
+    ex:hotDayThreshold 30 ;
+    ex:approvalRatio 1.5 ;
+    ex:similarPriceDiff 20 ;
+    rdfs:comment "明日の事情（近くのイベント、予報30℃以上、発売日）に関わる商品だけ予測で決める。それ以外は SAP の推奨数のまま。数は予測に近いケースの倍数。履歴のない商品は似た商品の履歴で予測する。" .
+
+# =========================================================================
+# UC2 店舗設備（Brick に合わせた種類と、「どの区画を受け持つか」の関係）
+# =========================================================================
+
+ex:Equipment rdfs:subClassOf brick:Equipment ; rdfs:label "設備" .
+ex:AirHandlingUnit  a owl:Class ; rdfs:subClassOf ex:Equipment , brick:AHU ; rdfs:label "空調機" .
+ex:LightingZone     a owl:Class ; rdfs:subClassOf ex:Equipment ; rdfs:label "照明ゾーン" .
+ex:FreezerCase      a owl:Class ; rdfs:subClassOf ex:Equipment ; rdfs:label "冷凍ケース" .
+ex:RefrigeratedCase a owl:Class ; rdfs:subClassOf ex:Equipment ; rdfs:label "冷蔵ケース" .
+ex:ElectricMeter    a owl:Class ; rdfs:subClassOf ex:Equipment ; rdfs:label "電力メーター" .
+ex:Zone             a owl:Class ; rdfs:subClassOf brick:Zone ; rdfs:label "売場の区画" .
+ex:Sensor           a owl:Class ; rdfs:subClassOf brick:Point ; rdfs:label "センサー" .
+ex:ZoneTemperatureSensor a owl:Class ; rdfs:subClassOf ex:Sensor ; rdfs:label "売場の温度センサー" .
+ex:CaseTemperatureSensor a owl:Class ; rdfs:subClassOf ex:Sensor ; rdfs:label "ケースの庫内温度センサー" .
+ex:OutdoorTemperatureSensor a owl:Class ; rdfs:subClassOf ex:Sensor ; rdfs:label "外気温センサー" .
+ex:EquipmentSetting a owl:Class ; rdfs:label "設備の調整（時刻つきの設定）" .
+ex:AdjustmentPlan   a owl:Class ; rdfs:label "電力の調整計画" .
+
+ex:feeds a owl:ObjectProperty ; rdfs:domain ex:AirHandlingUnit ; rdfs:range ex:Zone ; rdfs:label "受け持つ区画" .
+ex:fedBy a owl:ObjectProperty ; owl:inverseOf ex:feeds .
+ex:locatedIn a owl:ObjectProperty ; rdfs:label "取り付け先の区画" .
+ex:attachedTo a owl:ObjectProperty ; rdfs:label "取り付け先の設備" .
+# センサー → 区画 → その区画を受け持つ空調機
+ex:servedBy a owl:ObjectProperty ;
+    owl:propertyChainAxiom ( ex:locatedIn ex:fedBy ) ;
+    rdfs:label "そのセンサーの区画を受け持つ空調機" .
+
+# 動かせる幅を持つ設備は「ピークに動かせる設備」
+ex:AdjustmentKind a owl:Class ; rdfs:label "調整の種類" .
+ex:adjustableBy a owl:ObjectProperty ; rdfs:range ex:AdjustmentKind ; rdfs:label "できる調整" .
+ex:PeakAdjustable a owl:Class ; rdfs:label "ピークに動かせる設備" ;
+    owl:equivalentClass [ a owl:Restriction ; owl:onProperty ex:adjustableBy ; owl:someValuesFrom ex:AdjustmentKind ] .
+
+# 電力ピークの方針: 削る順（売場の快適さに響くものほど後）
+ex:DefrostShift a ex:AdjustmentKind ; rdfs:label "霜取りの時刻をずらす" ; ex:priority 1 .
+ex:Precool      a ex:AdjustmentKind ; rdfs:label "冷凍ケースの予冷と出力" ; ex:priority 2 .
+ex:Setpoint     a ex:AdjustmentKind ; rdfs:label "空調の設定温度" ; ex:priority 3 .
+ex:Dimming      a ex:AdjustmentKind ; rdfs:label "照明の調光" ; ex:priority 4 .
+
+ex:PeakPolicy a ex:Policy ; rdfs:label "電力ピークの方針" ;
+    ex:peakFrom 14 ; ex:peakTo 15 ; ex:marginKw 40 ;
+    rdfs:comment "契約電力から余裕（40kW）を引いた値を下回るまで、削る順に調整を足す。" .
+ex:ComfortPolicy a ex:Policy ; rdfs:label "売場の快適性と霜取りの決まり" ;
+    ex:maxZoneCelsius 27 ; ex:defrostMaxGapHours 8 .
+
+# =========================================================================
+# UC3 店舗をまたぐ在庫融通（配送車、帰り便、見切り）
+# =========================================================================
+
+ex:Vehicle  a owl:Class ; rdfs:label "配送車" .
+ex:Transfer a owl:Class ; rdfs:label "店間移動" .
+ex:Markdown a owl:Class ; rdfs:label "見切り（時刻つきの値引き）" .
+ex:TransferPlan a owl:Class ; rdfs:label "夕方の在庫融通の計画" .
+
+ex:TransferPolicy a ex:Policy ; rdfs:label "在庫融通の方針" ;
+    ex:nearbyStoreKm 5.5 ; ex:routeRadiusKm 1 ; ex:maxAutoUnits 50 ; ex:maxAutoAmount 15000 ;
+    rdfs:comment "ネットスーパー配送車の帰り便だけで運ぶ。新しい便は出さない。期限が今日の商品は移さず、見切りにする。" .
+ex:MarkdownPolicy a ex:Policy ; rdfs:label "見切りの方針" ;
+    ex:maxDiscount 50 ; ex:hoursBeforeClose 3 .

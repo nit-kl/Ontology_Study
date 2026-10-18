@@ -1,0 +1,5 @@
+site_id,kind,name,lat,lon,open,close,supplied_by,area
+ST-014,Store,1号店,35.6800,139.7600,08:00,22:00,DC-01,East
+ST-031,Store,2号店,35.6800,139.8041,08:00,22:00,DC-01,East
+ST-040,Store,3号店,35.6800,139.8594,08:00,22:00,DC-01,East
+DC-01,DistributionCenter,東部 DC,35.6500,139.7900,,,,East

@@ -1,0 +1,8 @@
+retail_code,wholesale_code,name,category,temp_zone,price,case_size,shelf_life_days,gtin,launch_date
+R-9020,W-41020,鮭おにぎり,onigiri,Chilled,150,6,2,4900000000214,
+R-9105,W-41105,塩レモンおにぎり,onigiri,Chilled,160,6,2,4900000000221,2026-10-24
+R-3310,W-31008,スポーツドリンク 500ml,sportsDrink,Ambient,140,24,180,4900000000306,
+R-3901,W-39010,氷 1kg,ice,Frozen,200,6,365,4900000000399,
+R-5581,W-10022,B社 オーガニック牛乳 1L,unadjusted,Chilled,285,12,7,4900000000023,
+R-6120,W-61200,ヨーグルト 400g,yogurt,Chilled,198,6,10,4900000000610,
+R-8104,W-81040,幕の内弁当,bento,Chilled,498,1,1,4900000000818,
