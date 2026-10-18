@@ -3,12 +3,7 @@ body { margin: 0; min-height: 100vh; display: grid; place-items: center; backgro
   font: 13px/1.35 "MS PGothic", "MS UI Gothic", Tahoma, sans-serif; }
 .device { width: 340px; background: linear-gradient(#3d4148, #23262b); border-radius: 26px 26px 40px 40px; padding: 18px 18px 26px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, .45), inset 0 2px 0 #5a5f68; margin: 16px; }
-.brand { color: #b8bec8; font: bold 11px Arial, sans-serif; letter-spacing: 2px; margin: 0 0 8px 4px; }
-.brand span { color: #f0a020; }
 .lcd { background: #fff; border: 6px solid #111; border-radius: 4px; height: 400px; display: flex; flex-direction: column; overflow: hidden; }
-.cebar { background: linear-gradient(#2c5ec8, #1b3f8f); color: #fff; font-size: 12px; padding: 2px 6px; display: flex; gap: 8px; }
-.cebar .start { font-weight: bold; }
-.cebar .batt { margin-left: auto; color: #9fef9f; }
 .apptitle { background: #d4d0c8; border-bottom: 1px solid #808080; padding: 3px 6px; font-weight: bold; }
 .lcdbody { flex: 1; overflow: auto; padding: 6px; }
 .menuitem { display: block; width: 100%; text-align: left; font: inherit; font-size: 15px; margin: 0 0 6px; padding: 8px 8px; background: #ece9d8;
@@ -19,25 +14,18 @@ body { margin: 0; min-height: 100vh; display: grid; place-items: center; backgro
 .task .when { color: #1b3f8f; font-weight: bold; }
 .task.done { color: #777; text-decoration: line-through; }
 table.list { border-collapse: collapse; width: 100%; font-size: 13px; }
-.list th { background: #1b3f8f; color: #fff; font-weight: normal; padding: 2px 4px; text-align: left; }
 .list td { border-bottom: 1px solid #ccc; padding: 3px 4px; }
 .list td.n { text-align: right; font-family: "MS Gothic", monospace; }
 .list tr.ok td { background: #e2f6e2; }
 .bigbtn { width: 100%; font: bold 16px "MS PGothic", sans-serif; margin-top: 10px; padding: 12px; background: #f0a020; color: #000;
   border: 2px solid; border-color: #ffd27a #8a5a00 #8a5a00 #ffd27a; cursor: pointer; }
 .bigbtn:disabled { background: #ccc; color: #777; border-color: #eee #888 #888 #eee; cursor: default; }
-.msg { padding: 6px; border: 1px solid #808080; background: #ffffe1; margin: 6px 0; }
-.msg.ok { background: #e2f6e2; border-color: #2f8a2f; }
-.softkeys { display: flex; border-top: 1px solid #808080; background: #d4d0c8; }
-.softkeys span { flex: 1; text-align: center; padding: 3px 0; border-right: 1px solid #808080; font-size: 12px; }
 .keys { margin-top: 14px; }
-.fkeys { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 10px; }
-.pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.fkeys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .keys b { display: grid; place-items: center; height: 30px; background: linear-gradient(#5a5f68, #3a3e45); color: #e8e8e8; border-radius: 6px;
   font: bold 13px Arial, sans-serif; box-shadow: 0 2px 0 #15171a; cursor: pointer; user-select: none; }
 .keys b:active { transform: translateY(2px); box-shadow: none; }
 .keys .scan { background: linear-gradient(#f5b440, #d4880e); color: #222; }
-.keys .ent { background: linear-gradient(#3fa34d, #2a7a36); }
 .keys .clr { background: linear-gradient(#c94a4a, #9a2f2f); }
 .back-to-hub { position: fixed; right: 8px; bottom: 6px; font: 11px sans-serif; color: #444; }
 .toast { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: #ffffe1; border: 1px solid #000; padding: 4px 10px; }

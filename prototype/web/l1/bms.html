@@ -2,20 +2,16 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>中央監視システム</title>
+  <title>BMS</title>
 </head>
 <body>
   <div class="hmi">
-    <div class="topbar">
-      <span class="logo">SuperBAS</span><span class="ttl">中央監視システム Ver 5.2 ─ 1号店（ST-014）</span>
-      <span class="clock" id="clock">--:--</span><span class="user">オペレータ: SETSUBI01</span>
-    </div>
+    <div class="topbar"><span class="logo">BAS</span><span class="ttl">中央監視 1号店</span><span class="clock" id="clock">--:--</span></div>
     <div class="alarm" id="alarm"></div>
     <div class="body">
       <div class="menu" id="menu"></div>
       <div class="main" id="main"></div>
     </div>
-    <div class="status" id="status"></div>
   </div>
   <a class="back-to-hub" href="/">司令塔へ</a>
   <script type="module" src="/src/l1/bms.ts"></script>

@@ -1,21 +1,10 @@
 /* IBM 5250 端末エミュレーター風（AS/400 のグリーン画面） */
 body { margin: 0; background: #1e1e1e; font-family: "MS Gothic", "ＭＳ ゴシック", "Osaka-Mono", "Noto Sans Mono CJK JP", Consolas, monospace; }
 .emulator { max-width: 1060px; margin: 14px auto; background: #d4d0c8; border: 1px solid #000; }
-.embar { font: 12px "MS UI Gothic", sans-serif; padding: 3px 8px; background: #d4d0c8; border-bottom: 1px solid #808080; }
 .crt { background: #000; padding: 14px 18px; }
 .screen { color: #33ff66; font-size: 16px; line-height: 1.32; white-space: pre; letter-spacing: 0; text-shadow: 0 0 3px rgba(51, 255, 102, .35); }
 .screen .w { color: #f2f2f2; text-shadow: 0 0 3px rgba(255, 255, 255, .3); }
 .screen .b { color: #6fb8ff; }
-.screen .t { color: #4ee1e1; }
 .screen .r { color: #ff5555; text-shadow: 0 0 3px rgba(255, 80, 80, .4); }
-.screen .y { color: #ffe15c; }
-.screen .rv { background: #33ff66; color: #000; text-shadow: none; }
 .screen .rr { background: #ff5555; color: #000; text-shadow: none; }
-.screen .u { text-decoration: underline; }
-.screen .fk { cursor: pointer; }
-.screen .fk:hover { color: #fff; }
-.screen input { all: unset; color: #f2f2f2; text-decoration: underline; width: 3ch; caret-color: #33ff66; }
-.oia { display: flex; gap: 18px; background: #000; color: #33ff66; border-top: 1px solid #1f6b33; padding: 2px 18px; font-size: 13px; }
-.oia .pos { margin-left: auto; }
 .back-to-hub { position: fixed; right: 8px; bottom: 6px; font: 11px sans-serif; color: #888; }
-.toast { display: none; }

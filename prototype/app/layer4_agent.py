@@ -125,10 +125,10 @@ class OrderAgent:
                 info["similar"] = C.local(sim[0]["ref"]) if sim else None
         self.context = ctx
 
-        self.log("L4", "AI", "ナレッジグラフに明日の事情を問い合わせ（SPARQL / GeoSPARQL）",
-                 {"events": ctx["events"], "max_temp": ctx["max_temp"]})
+        self.log("L4", "AI", "明日の天気と近くのイベントを調べた",
+                 {"イベント": ctx["events"], "最高気温": ctx["max_temp"]})
         affected = {p: i for p, i in ctx["products"].items() if i["reasons"]}
-        self.log("L3", "OWL", "推論: 明日の事情に関わる商品",
+        self.log("L3", "推論", "明日よく売れそうな商品を割り出した",
                  {p: i["reasons"] + ([f"似た商品 {i['similar']}"] if i.get("similar") else [])
                   for p, i in affected.items()})
         return ctx
@@ -141,8 +141,8 @@ class OrderAgent:
         affected = [p for p, i in ctx["products"].items() if i["reasons"]]
 
         stock = self.pos.stock_api(store, list(ctx["products"]))
-        self.log("L4", "AI", "POS に店頭在庫と今日の販売数を確認（MCP）",
-                 {p: {"stock": s["stock"], "sold_today": s["sold_today"]} for p, s in stock.items()})
+        self.log("L4", "AI", "店の在庫と今日の売れ行きを確認した",
+                 {p: {"在庫": s["stock"], "今日の販売": s["sold_today"]} for p, s in stock.items()})
 
         for p, info in ctx["products"].items():
             s = stock[p]
@@ -163,10 +163,10 @@ class OrderAgent:
             line.history.append(f"案 {line.quantity}")
             plan.lines[p] = line
 
-        self.log("L4", "需要予測モデル", f"明日の販売数を予測（{self.model.version}）",
+        self.log("L4", "需要予測", "明日売れる数を予測した",
                  {p: plan.lines[p].forecast for p in affected})
-        self.log("L4", "AI", "発注の方針で案を作成",
-                 {p: {"quantity": ln.quantity, "recommended": ln.recommended, "reason": ln.reason}
+        self.log("L4", "AI", "発注案を作った",
+                 {p: {"発注": ln.quantity, "推奨": ln.recommended, "理由": ln.reason}
                   for p, ln in plan.lines.items()})
         return plan
 

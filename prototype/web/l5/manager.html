@@ -7,16 +7,19 @@
   <title>店長アプリ</title>
 </head>
 <body>
-  <div class="app">
-    <header class="appbar">
-      <div>
-        <div class="eyebrow">1号店 ・ ST-014</div>
-        <div class="hello">おはようございます、店長</div>
-      </div>
-      <div class="avatar">店</div>
-    </header>
-    <main id="screen"></main>
-    <nav class="tabbar" id="tabbar"></nav>
+  <div class="phone">
+    <div class="statusbar"><span id="clock">--:--</span><span class="sig">▂▄▆█ 5G ▮</span></div>
+    <div class="scroller" id="scroller">
+      <header class="appbar">
+        <div>
+          <div class="eyebrow" id="store">1号店</div>
+          <div class="hello" id="hello">店長</div>
+        </div>
+        <div class="avatar" id="avatar">店</div>
+      </header>
+      <main id="screen"></main>
+    </div>
+    <div class="done-overlay" id="done" hidden><div class="done-check">✓</div><b>承認しました</b><span>本部と店のシステムに反映しました</span></div>
   </div>
   <a class="back-to-hub" href="/">司令塔へ</a>
   <script type="module" src="/src/l5/manager.ts"></script>

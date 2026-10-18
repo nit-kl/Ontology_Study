@@ -7,24 +7,17 @@
 </head>
 <body>
   <header class="top">
-    <div class="brandmark">⛨</div>
-    <div>
-      <div class="eyebrow">データ来歴・監査・権限</div>
-      <h1>ガバナンス・コンソール</h1>
-    </div>
-    <div class="live"><span class="dot"></span><span id="now">--:--</span></div>
+    <h1>ガバナンス</h1>
+    <div class="live" id="now">--:--</div>
   </header>
   <main class="gov">
     <section class="card lineage">
-      <div class="cardhead"><div><h2>来歴をたどる</h2><p class="sub">発注の明細・設備の設定・店間移動が、何から、誰の判断で生まれたか（PROV-O）</p></div>
-        <select id="linesel"></select></div>
+      <div class="cardhead"><h2>来歴（PROV-O）</h2><select id="linesel"></select></div>
       <div id="lineage"></div>
     </section>
-    <section class="card activities"><h2>活動の記録</h2><p class="sub">監査グラフの prov:Activity。自動で確定したものも、どの規則で自動にしたかが残る</p><div id="activities"></div></section>
-    <section class="card rules"><h2>点検の規則（SHACL）</h2><p class="sub">今回のワークフローで、どの規則が何回働いたか</p><div id="rules"></div></section>
-    <section class="card perms"><h2>承認の権限（ODRL）</h2><p class="sub">SHACL の承認の点検が読む</p><div id="perms"></div></section>
-    <section class="card raw"><div class="cardhead"><div><h2>監査グラフ</h2><p class="sub">レイヤー3 のストアとは別のまとまり。事実はストア、来歴はここ</p></div>
-      <button class="btn ghost" id="toggle">Turtle を表示</button></div><pre id="turtle" hidden></pre></section>
+    <section class="card perms"><h2>権限（ODRL）</h2><div id="perms"></div></section>
+    <section class="card raw"><div class="cardhead"><h2>監査グラフ</h2>
+      <button class="btn ghost" id="toggle">Turtle</button></div><pre id="turtle" hidden></pre></section>
   </main>
   <a class="back-to-hub" href="/">司令塔へ</a>
   <script type="module" src="/src/l5/governance.ts"></script>

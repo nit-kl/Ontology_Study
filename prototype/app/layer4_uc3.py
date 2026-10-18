@@ -111,12 +111,12 @@ class TransferAgent:
                         "label": str(r["label"])} for r in routes],
             "estimates": estimates,
         }
-        self.log("L4", "AI", "ナレッジグラフに近くの店・期限の短い商品・今夜のルートを問い合わせ（SPARQL / GeoSPARQL）",
+        self.log("L4", "AI", "近くの店、期限の短い商品、今夜の配送ルートを調べた",
                  {"近くの店": self.context["nearby"], "期限の短い商品": list(info)})
-        self.log("L4", "AI", "3店の POS に店頭在庫（期限ごと）と今日の販売数を確認（MCP）",
-                 {f"{e['store']} {e['product']}": f"在庫 {e['stock']}・今日 {e['sold_today']}・期限 {e['expiry']}" for e in estimates})
-        self.log("L4", "AI", "閉店までの売れ行きを見積もる",
-                 {f"{e['store']} {e['name']}": f"{'余る' if e['balance'] > 0 else '足りない'} {abs(e['balance'])}" for e in estimates if e["balance"]})
+        self.log("L4", "AI", "3店の在庫と今日の売れ行きを確認した",
+                 {f"{C.store_name(e['store'])} {e['name']}": f"在庫 {e['stock']}・今日 {e['sold_today']}・期限 {e['expiry']}" for e in estimates})
+        self.log("L4", "AI", "閉店までに余る数と足りない数を見積もった",
+                 {f"{C.store_name(e['store'])} {e['name']}": f"{'余る' if e['balance'] > 0 else '足りない'} {abs(e['balance'])}" for e in estimates if e["balance"]})
 
         transfers, markdowns = [], []
         n = 1601
@@ -143,11 +143,11 @@ class TransferAgent:
                 markdowns.append(Markdown(f"M-{n}", e["product"], e["name"], e["store"], e["expiry"], left[(e["store"], e["product"])],
                                           [(h, 30), (h + 1.5, int(float(pol["maxd"])))]))
                 n += 1
-        self.log("L3", "OWL", "推論と GeoSPARQL: 帰り便が立ち寄れる店",
-                 [f"{r['vehicle']}（{r['home']}）は {r['store']} から {r['km']}km を通る" for r in self.context["routes"]])
-        self.log("L4", "AI", "在庫融通の方針で案を作成",
-                 [f"{t.id} {t.name} {t.quantity}: {t.source} → {t.dest}（{t.vehicle} {t.eta}）" for t in transfers] +
-                 [f"{m.id} {m.store} の{m.name}: " + "、".join(f"{int(h)}:{int(h % 1 * 60):02d} から{d}%引き" for h, d in m.steps) for m in markdowns])
+        self.log("L3", "推論", "配送車の帰り道に寄れる店を割り出した",
+                 [f"{r['vehicle']}（{C.store_name(r['home'])}の車）は{C.store_name(r['store'])}から {r['km']}km を通る" for r in self.context["routes"]])
+        self.log("L4", "AI", "店どうしで商品を回す案と値引きの案を作った",
+                 [f"{t.name} {t.quantity}: {C.store_name(t.source)} → {C.store_name(t.dest)}（{t.vehicle} {t.eta}）" for t in transfers] +
+                 [f"{C.store_name(m.store)}の{m.name}: " + "、".join(f"{int(h)}:{int(h % 1 * 60):02d} から{d}%引き" for h, d in m.steps) for m in markdowns])
         return transfers, markdowns
 
     def reduce(self, t: Transfer, actual: int) -> None:
@@ -245,8 +245,8 @@ class EveningWorkflow(Workflow):
 
     def act_start(self) -> None:
         self.set_time("16:00")
-        self.log("L4", "KINETIC", "毎日 16:00 のスケジュールで「夕方の在庫融通」ワークフローが起動")
-        self.log("L4", "KINETIC", "AI に今日の融通と見切りの案を依頼")
+        self.log("L4", "ワークフロー", "16:00 になったので「夕方の在庫融通」を始めた")
+        self.log("L4", "ワークフロー", "AI に在庫の融通と値引きの案を頼んだ")
         transfers, markdowns = self.agent.plan()
         for t in transfers:
             self.transfers[t.id] = t
@@ -256,16 +256,16 @@ class EveningWorkflow(Workflow):
         res = self.gate.pre_validate(plan_graph(self.day, transfers, markdowns))
         self.record_validation("事前検証", res)
         if not res.conforms:
-            self.log("L3", "SHACL", "事前検証: 不合格", res.results)
+            self.log("L3", "ルール点検", "案をルールで点検: 問題あり", res.results)
             self.state = "失敗"
             return
-        self.log("L3", "SHACL", "事前検証: 合格（温度帯・期限・保冷時間・車の空き・引当分・帰り便・見切りの上限）")
+        self.log("L3", "ルール点検", "案をルールで点検: 問題なし（温度・期限・車の空き・値引きの上限など）")
         needs = {k.split("/")[0]: v for k, v in self.gate.needs_approval(plan_graph(self.day, transfers, markdowns)).items()}
         auto_t = [t for t in transfers if t.id not in needs]
         need_t = [t for t in transfers if t.id in needs]
         for t in transfers:
             t.status = "承認待ち" if t.id in needs else "承認不要"
-        self.log("L3", "SHACL", "承認の要否", {"承認不要": [t.id for t in auto_t] + [m.id for m in markdowns],
+        self.log("L3", "ルール点検", "店長の承認が要る案を判定した", {"承認不要": [t.id for t in auto_t] + [m.id for m in markdowns],
                                                "受け入れる店の店長の承認が要る": needs})
         self.set_time("16:10")
         res = self._confirm(auto_t, markdowns, "16:10", C.EX.TransferPolicy, "上限以内の店間移動と見切りを自動で確定",
@@ -279,7 +279,7 @@ class EveningWorkflow(Workflow):
                 "lines": [x.as_dict() | {"why": needs[x.id]} for x in need_t],
             }
             self.state = "承認待ち"
-            self.log("L5", "業務画面", "2号店の店長のタブレットに承認依頼", self.approval_request["message"])
+            self.log("L5", "店長アプリ", "2号店の店長に承認を頼んだ", self.approval_request["message"])
         else:
             self.state = "実行中"
 
@@ -288,13 +288,13 @@ class EveningWorkflow(Workflow):
         need = [self.transfers[x["id"]] for x in self.approval_request["lines"]]
         for t in need:
             t.approved_by, t.approved_quantity = approver, t.quantity
-        self.log("L5", "店長", "タブレットで「承認する」をタップ", {"approver": approver, "transfers": [t.id for t in need]})
+        self.log("L5", "店長", "受け入れを承認した", {"approver": approver, "transfers": [t.id for t in need]})
         res = self._confirm(need, [], "16:15", C.PERSON[approver], "2号店の店長が、上限を超える店間移動の受け入れを承認")
         self.record_validation("再検証（承認付き）", res)
         if not res.conforms:
             for t in need:
                 t.status = "却下"
-            self.log("L3", "SHACL", "再検証: 不合格", res.results)
+            self.log("L3", "ルール点検", "承認後の点検: 問題あり", res.results)
         self.approval_request = None
         self.state = "実行中"
 
@@ -307,13 +307,13 @@ class EveningWorkflow(Workflow):
             # 送り出す店で取り出し作業。実際の数が足りなければ、AI に数量の修正を頼む
             for tr in [x for x in self.transfers.values() if x.status == "確定"]:
                 actual = staff.pick(pos, f"pick-{tr.id}", tr.source, tr.product, tr.quantity)
-                self.log("L1", "スタッフ端末", f"{tr.source} で取り出し: {tr.name} {actual} が見つかった（予定 {tr.quantity}）")
+                self.log("L1", "スタッフ端末", f"{C.store_name(tr.source)}で「{tr.name}」を取り出し: {actual}（予定 {tr.quantity}）")
                 if actual >= tr.quantity:
                     continue
-                self.log("L4", "KINETIC", f"{tr.id} の実際の数が足りないので、AI に数量の修正を頼む")
+                self.log("L4", "ワークフロー", f"「{tr.name}」が予定より少ないので、AI に数量の修正を頼んだ")
                 self.agent.reduce(tr, actual)
-                self.log("L4", "AI", f"{tr.id} を {actual} に減らす（減らすだけなので承認不要）")
-                res = self._confirm([tr], [], t, C.EX.TransferPolicy, f"{tr.id} を {actual} に減らす",
+                self.log("L4", "AI", f"「{tr.name}」を {actual} に減らした（減らすだけなので承認は不要）")
+                res = self._confirm([tr], [], t, C.EX.TransferPolicy, f"取り出せた数に合わせて{tr.name}を {actual} に減らす",
                                     "店間移動の数量を減らすのは承認不要")
                 self.record_validation(f"確定（{tr.id} の数量の修正）", res)
         elif t in ("17:50", "18:10"):
@@ -323,7 +323,7 @@ class EveningWorkflow(Workflow):
                 staff.complete(f"recv-{tr.id}", f"{tr.quantity} 受け入れ")
                 tms.update_stop(tr.vehicle, tr.dest, status="完了")
                 tr.status = "受け入れ済み"
-                self.log("L1", "スタッフ端末", f"2号店で {tr.vehicle} から {tr.name} {tr.quantity} を受け入れ（スキャン）。POS の在庫が増える")
+                self.log("L1", "スタッフ端末", f"{C.store_name(tr.dest)}で「{tr.name}」{tr.quantity} を受け取り、在庫に反映した")
             sync_cdc(self.l1, self.kg)
         elif t in ("19:00", "20:30"):
             for m in self.markdowns.values():
@@ -331,10 +331,10 @@ class EveningWorkflow(Workflow):
                     if hm(h) == t and m.status == "確定":
                         label = pos.set_price(m.store, m.product, self.l1.sap.price(m.product), pct, t, f"見切り {m.id}")
                         m.applied.append(t)
-                        self.log("L4", "KINETIC", f"{t} まで待って（タイマー）、{m.store} の{m.name}を {pct}% 引きに")
-                        self.log("L1", "電子棚札 / POS", f"{m.store} {m.name} の売価を {label['price']} 円に（{pct}%引き）", label)
+                        self.log("L4", "ワークフロー", f"{t} になったので、{C.store_name(m.store)}の{m.name}を {pct}% 引きにする")
+                        self.log("L1", "電子棚札 / POS", f"{C.store_name(m.store)}の{m.name}を {label['price']} 円に値下げした（{pct}%引き）", label)
         elif t == "22:00":
-            self.log("L4", "KINETIC", "閉店。移動・数量の修正・見切りの来歴は監査グラフに残り、売れ残りは履歴の蓄積先から BI で振り返る")
+            self.log("L4", "ワークフロー", "閉店。今日の判断の記録が残った")
             self.state = "完了"
 
     def on_confirmed(self, event: dict) -> None:
@@ -343,8 +343,8 @@ class EveningWorkflow(Workflow):
             t.status = "確定"
         for m in markdowns:
             m.status = "確定"
-        self.log("L3", "SHACL", "合格 → SPARQL Update 成功 → 確定イベントを発行", event)
-        self.log("L5", "ガバナンス", "監査グラフに来歴を記録（PROV-O）", self.gate.audit.entries[-1])
+        self.log("L3", "ルール点検", "点検に合格したので確定した", event)
+        self.log("L5", "監査記録", "誰が何をもとに決めたかを記録した", self.gate.audit.entries[-1])
         sap, tms, pos, staff = self.l1.sap, self.l1.tms, self.l1.pos, self.l1.staff
         for t in transfers:
             sap.upsert_order(t.id, t.dest, t.source, self.day, {t.product: t.quantity}, kind="店間移動")
@@ -354,9 +354,9 @@ class EveningWorkflow(Workflow):
             staff.upsert_task(f"recv-{t.id}", t.dest, t.eta, f"{t.vehicle} から {t.name} {t.quantity} を受け入れて陳列（{t.id}）")
         if transfers:
             self.log("L1", "SAP / TMS / POS / スタッフ端末",
-                     "店間移動伝票、帰り便の立ち寄り、入荷予定、取り出しと受け入れの作業を書き戻し",
-                     {t.id: f"{t.source} → {t.dest} {t.name} {t.quantity}（{t.vehicle} {t.eta}）" for t in transfers})
+                     "移動の伝票、配送車の立ち寄り、入荷予定、店の作業を登録した",
+                     {t.id: f"{C.store_name(t.source)} → {C.store_name(t.dest)} {t.name} {t.quantity}（{t.vehicle} {t.eta}）" for t in transfers})
             sync_cdc(self.l1, self.kg)
         for m in markdowns:
-            self.log("L4", "KINETIC", f"{m.id} は値引きの時刻（" + "、".join(hm(h) for h, _ in m.steps) + "）まで待つ")
+            self.log("L4", "ワークフロー", f"{C.store_name(m.store)}の{m.name}は値引きの時刻（" + "、".join(hm(h) for h, _ in m.steps) + "）まで待つ")
 

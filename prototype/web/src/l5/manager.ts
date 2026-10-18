@@ -1,57 +1,19 @@
-// レイヤー5 店長アプリ（スマホ・タブレット）。承認の依頼を受けて承認し、自動で動いたことの知らせを受ける。
+// レイヤー5 店長アプリ（スマホ）。AI が自動で済ませたことを見せ、店長の判断が要るものだけを承認してもらう。
 // 画面に出すのは、レイヤー3 の事前検証に合格した提案だけ。承認はレイヤー3 の SHACL で再検証される。
-// UC1 と UC2 は1号店の店長、UC3 は受け入れる2号店の店長が使う。右上のアイコンで切り替える。
+// UC1・UC2 は1号店の店長、UC3 は受け入れる2号店の店長が使う。
 import "./modern.css";
 import "./manager.css";
 import { act, hasContext, storeName, watch, type Line, type State, type Transfer } from "../lib/api";
-import { $, $$, esc, toast } from "../lib/dom";
-import { attachTooltips, legend, orderRangeChart } from "./charts";
+import { $, esc, toast } from "../lib/dom";
+import { attachTooltips, orderRangeChart } from "./charts";
 
-type Tab = "home" | "approve" | "notices";
-const USERS = [{ id: "manager-ST014", store: "ST-014" }, { id: "manager-ST031", store: "ST-031" }];
+const STORE_OF: Record<string, string> = { "manager-ST014": "ST-014", "manager-ST031": "ST-031" };
 let S: State | null = null;
-let tab: Tab = (["home", "approve", "notices"] as const).find((k) => k === location.hash.slice(1)) ?? "home";
-let user = loadUser();
+let user = "";
 let sending = false;
-let seenRequest = "";
-
-function loadUser(): string {
-  try {
-    return localStorage.getItem("manager-user") ?? USERS[0].id;
-  } catch {
-    return USERS[0].id;
-  }
-}
-
-function setUser(id: string) {
-  user = id;
-  try {
-    localStorage.setItem("manager-user", id);
-  } catch {
-    /* 保存できない環境では、このページを開いている間だけ覚える */
-  }
-}
-
-const me = () => USERS.find((u) => u.id === user)!;
-const mine = (s: State) => !!s.approval_request && s.approval_request.approver === user;
-
-$(".avatar").addEventListener("click", () => {
-  setUser(USERS[(USERS.findIndex((u) => u.id === user) + 1) % USERS.length].id);
-  toast(`${storeName(me().store)}の店長に切り替えました`);
-  render();
-});
 
 watch((s) => {
-  // 自分宛ての依頼が新しく届いたら、承認のタブへ。シナリオに合わせて使う人も切り替える
-  if (s.approval_request && s.approval_request.approver !== user && USERS.some((u) => u.id === s.approval_request!.approver)) {
-    setUser(s.approval_request.approver);
-  }
-  const key = s.approval_request ? `${s.scenario}:${s.approval_request.plan}:${s.approval_request.lines.length}` : "";
-  if (key && key !== seenRequest && S) {
-    toast("承認の依頼が届きました");
-    tab = "approve";
-  }
-  seenRequest = key;
+  user = s.scenario === "uc3" ? "manager-ST031" : "manager-ST014";
   S = s;
   render();
 });
@@ -63,140 +25,137 @@ async function approve() {
   sending = false;
   if (!r.ok) return toast(r.message);
   S = r.state;
-  toast("承認しました");
+  const done = $("#done");
+  done.hidden = false;
+  setTimeout(() => (done.hidden = true), 1600);
   render();
 }
 
+const store = () => STORE_OF[user];
+const mine = () => !!S?.approval_request && S.approval_request.approver === user;
+const hour = (now: string) => Number(now.replace("翌 ", "").slice(0, 2));
+
 function render() {
   if (!S) return;
-  $(".eyebrow").textContent = `${storeName(me().store)} ・ ${me().store}`;
-  $(".avatar").textContent = storeName(me().store).replace("店", "");
-  $(".hello").textContent = `${greeting(S.now)}、店長`;
-  const tabs: [Tab, string, string][] = [["home", "⌂", "ホーム"], ["approve", "✓", "承認"], ["notices", "🔔", "お知らせ"]];
-  $("#tabbar").innerHTML = tabs.map(([k, ic, n]) => `<button class="${k === tab ? "on" : ""}" data-k="${k}"><span class="ic">${ic}</span>${n}
-    ${k === "approve" && mine(S!) ? `<span class="badge">${S!.approval_request!.lines.length}</span>` : ""}</button>`).join("");
-  $$<HTMLButtonElement>("#tabbar button").forEach((b) => (b.onclick = () => { tab = b.dataset.k as Tab; render(); }));
+  $("#clock").textContent = S.now.replace("翌 ", "");
+  $("#store").textContent = `${storeName(store())} ・ ${store()}`;
+  $("#avatar").textContent = storeName(store()).replace("号店", "");
+  const h = hour(S.now);
+  $("#hello").textContent = `${S.now.startsWith("翌") || h < 11 ? "おはようございます" : h < 17 ? "こんにちは" : "おつかれさまです"}、店長`;
   const el = $("#screen");
-  ({ home: vHome, approve: vApprove, notices: vNotices })[tab](el);
+  el.innerHTML = hero() + (mine() ? approval() : "") + timeline();
+  document.getElementById("approve")?.addEventListener("click", () => void approve());
   attachTooltips(el);
 }
 
-function greeting(now: string) {
-  const h = Number(now.replace("翌 ", "").slice(0, 2));
-  return now.startsWith("翌") || h < 11 ? "おはようございます" : h < 17 ? "こんにちは" : "おつかれさまです";
-}
+// ---- いちばん上のカード（今日の仕事のまとめ） -------------------------------------
 
-function hero(eyebrow: string, title: string, body: string, stats: [string | number, string][]) {
-  return `<section class="card hero"><div class="eyebrow">${eyebrow}</div><h2>${title}</h2><p>${body}</p>
-    <div class="stats">${stats.map(([v, k]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join("")}</div></section>`;
-}
-
-function vHome(el: HTMLElement) {
+/** AI が方針の範囲内で自動で確定した件数と、店長の判断が要る件数。 */
+function counts(): [number, number] {
   const s = S!;
-  const pendingMine = mine(s);
-  const cta = pendingMine ? `<button class="btn" id="go-approve">承認の依頼を見る（${s.approval_request!.lines.length}件）</button>` : "";
+  const auto = s.audit.filter((a) => !a.agent.startsWith("manager")).length + (s.uc2?.notifications.length ?? 0);
+  return [auto, mine() ? s.approval_request!.lines.length : 0];
+}
+
+function hero(): string {
+  const s = S!;
+  const [auto, need] = counts();
+  const head = (eyebrow: string, title: string, body: string) =>
+    `<section class="hero"><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${body}
+      <div class="tally"><div><b>${auto}</b><span>AI が自動で処理</span></div><div class="${need ? "need" : ""}"><b>${need}</b><span>あなたの判断</span></div></div></section>`;
+
   if (s.scenario === "uc1") {
-    const lines = s.plan?.lines ?? [];
     const ctx = hasContext(s.context) ? s.context : null;
     const ev = ctx?.events.find((e) => e.nearby);
-    const title = ({ 待機: "明日の発注は 10:00 に作られます", 承認待ち: "明日の発注に、あなたの承認が要ります",
-      締め待ち: "明日の発注は確定しました", 完了: "今朝の入荷は検品済みです", 失敗: "発注の作成が止まりました" } as Record<string, string>)[s.workflow_state] ?? "";
-    el.innerHTML = hero(`明日 10/24（土）の発注 ・ ${esc(s.now)}`, title,
-      s.workflow_state === "承認待ち" ? "ふだんより大きく増やす品目だけ確認してください。" : "方針の範囲内の品目は自動で確定します。",
-      [[s.audit.filter((a) => a.agent === "OrderPolicy").flatMap((a) => a.generated).length, "自動で確定"],
-       [lines.filter((l) => l.status === "承認待ち").length, "承認待ち"],
-       [lines.reduce((n, l) => n + (l.status === "確定" ? l.quantity : 0), 0).toLocaleString(), "確定した数量"]]) + cta + `
-      <section class="card"><h2>明日の事情</h2><p class="sub">本部のナレッジグラフが見つけたこと</p>
-      ${ctx ? `<div class="context">
-        <div class="ic">⚽</div><div><b>${ev ? esc(ev.label) : "近くの大きなイベントはなし"}</b>
-          <span>${ev ? `18:00 開始 ・ ${ev.attendance.toLocaleString()}人 ・ 店から ${ev.km}km` : ""}</span></div>
-        <div class="ic">☀</div><div><b>予報 最高 ${ctx.max_temp}℃</b><span>暑い日の基準は ${ctx.policy.th}℃</span></div>
-        <div class="ic">✦</div><div><b>${Object.values(ctx.products).filter((p) => p.reasons.includes("明日発売")).map((p) => esc(p.name)).join("、") || "新商品なし"}</b>
-          <span>明日発売</span></div></div>` : `<p class="empty">10:00 の発注の作成のあとに表示されます</p>`}</section>`;
-  } else if (s.scenario === "uc2") {
+    const title = ({ 待機: "10:00 に AI が発注を作ります", 承認待ち: need ? `${need}品だけ確認してください` : "承認を待っています",
+      締め待ち: "明日の発注は確定しました", 完了: "今朝の入荷は検品済みです" } as Record<string, string>)[s.workflow_state] ?? "";
+    const chips = ctx ? `<div class="chips">
+        ${ev ? `<span class="chip-lg">⚽ ${esc(ev.label.replace(/の.*$/, ""))} ${(ev.attendance / 10000).toFixed(0)}万人</span>` : ""}
+        <span class="chip-lg">☀ 最高 ${ctx.max_temp}℃</span>
+        ${Object.values(ctx.products).filter((p) => p.reasons.includes("明日発売")).map((p) => `<span class="chip-lg">✦ ${esc(p.name)} 発売</span>`).join("")}
+      </div>` : "";
+    return head("明日 10/24（土）の発注", title, chips);
+  }
+  if (s.scenario === "uc2") {
     const c = s.uc2!.context;
-    const latest = s.systems.bms.history[s.systems.bms.history.length - 1];
-    const title = ({ 待機: "今日の電力調整は 12:30 に決まります", 実行待ち: "今日の電力調整が決まりました（自動）",
-      実行中: "電力調整を実行中です", 完了: "今日のピークは契約電力の範囲内でした", 失敗: "調整の作成が止まりました" } as Record<string, string>)[s.workflow_state] ?? "";
-    el.innerHTML = hero(`今日 ${s.day.slice(5).replace("-", "/")} の電力 ・ ${esc(s.now)}`, title,
-      "方針の範囲内の調整なので、承認は要りません。外れたら、その設備だけ自動で元に戻します。",
-      [[c.projected_kw ? `${c.projected_kw}` : "―", "何もしないとき kW"], [c.planned_kw ? `${c.planned_kw}` : "―", "計画 kW"], [`${latest.kw}`, "いま kW"]]) +
-      `<section class="card"><h2>最新のお知らせ</h2><p class="sub">自動で動いたことは、すべて届きます</p>${noticeList(4)}</section>`;
-  } else {
-    const u = s.uc3!;
-    const incoming = u.transfers.filter((t) => t.dest === me().store);
-    const outgoing = u.transfers.filter((t) => t.source === me().store);
-    const title = me().store === "ST-031" ? (pendingMine ? "今夜の受け入れに、あなたの承認が要ります" : incoming.length ? "今夜、ほかの店から商品が届きます" : "今夜の在庫融通は 16:00 に決まります")
-      : outgoing.length ? "今夜、2号店へ商品を送ります" : "今夜の在庫融通は 16:00 に決まります";
-    el.innerHTML = hero(`今日 ${s.day.slice(5).replace("-", "/")} の夕方 ・ ${esc(s.now)}`, title,
-      "上限以内の移動と見切りは自動で確定します。上限を超える受け入れだけ、受け入れる店の店長が承認します。",
-      [[incoming.length, "受け入れ"], [outgoing.length, "送り出し"], [u.markdowns.filter((m) => m.store === me().store).length, "見切り"]]) + cta +
-      `<section class="card"><h2>${storeName(me().store)}に関わる移動</h2><p class="sub">ネットスーパー配送車の帰り便で運びます</p>
-        ${[...incoming, ...outgoing].map(transferItem).join("") || `<p class="empty">16:00 の案のあとに表示されます</p>`}</section>`;
+    const b = s.systems.bms;
+    const latest = b.history[b.history.length - 1];
+    const title = ({ 待機: "12:30 に AI が調整を決めます", 実行待ち: "今日の調整は AI が決めました", 実行中: "ピークを AI が見張っています",
+      完了: "今日も契約電力の範囲内でした" } as Record<string, string>)[s.workflow_state] ?? "";
+    const body = `<div class="power">
+        <div class="kw"><b>${latest.kw}</b><span>kW いま</span></div>
+        ${c.projected_kw ? `<div class="saved"><s>${c.projected_kw}</s> → <b>${c.planned_kw}</b> kW<span>何もしないとき → AI の計画</span></div>` : ""}
+      </div>${spark(b.history.map((r) => r.kw), b.contract_kw)}`;
+    return head(`今日 ${s.day.slice(5).replace("-", "/")} の電力`, title, body);
   }
-  document.getElementById("go-approve")?.addEventListener("click", () => { tab = "approve"; render(); });
+  const u = s.uc3!;
+  const inbound = u.transfers.filter((t) => t.dest === store());
+  const title = mine() ? `${need}件だけ確認してください` : inbound.length ? `今夜 ${inbound.length} 便が届きます` : "16:00 に AI が融通を決めます";
+  const body = inbound.length ? `<div class="chips">${inbound.map((t) =>
+    `<span class="chip-lg">🚚 ${esc(t.name)} ${t.quantity} ・ ${t.eta}</span>`).join("")}</div>` : "";
+  return head(`今日 ${s.day.slice(5).replace("-", "/")} の夕方`, title, body);
 }
 
-function transferItem(t: Transfer & { why?: string }) {
-  const inbound = t.dest === me().store;
-  return `<div class="item">
-    <div><div class="name">${esc(t.name)}</div><div class="muted">${inbound ? `${storeName(t.source)}から` : `${storeName(t.dest)}へ`} ・ ${t.vehicle} ${t.eta} 着</div></div>
-    <div class="qty"><b>${t.quantity}</b></div>
-    ${t.why ? `<div class="why"><span class="pill warn">⚠ ${esc(t.why.split("。")[0])}</span></div>` : `<div class="why"><span class="pill ${t.status.includes("済") || t.status === "確定" ? "good" : ""}">${esc(t.status)}</span> ${t.history.map(esc).join(" ")}</div>`}
-  </div>`;
+/** デマンドの小さな折れ線。契約電力を点線で引く。 */
+function spark(values: number[], contract: number): string {
+  if (values.length < 2) return "";
+  const W = 300, H = 56, lo = 700, hi = 860;
+  const x = (i: number) => (i / (values.length - 1)) * W;
+  const y = (v: number) => H - ((v - lo) / (hi - lo)) * H;
+  const pts = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="デマンドの推移">
+    <line x1="0" x2="${W}" y1="${y(contract)}" y2="${y(contract)}" class="limit"/>
+    <polygon points="0,${H} ${pts} ${W},${H}" class="area"/><polyline points="${pts}" class="ln"/></svg>`;
 }
 
-function lineItem(l: Line & { why?: string }) {
-  return `<div class="item">
-    <div><div class="name">${esc(l.name)}</div><div class="muted">${esc(l.reason)}</div></div>
-    <div class="qty">${l.recommended != null ? `<s>${l.recommended}</s>` : ""}<b>${l.quantity}</b></div>
-    <div class="viz">${orderRangeChart([l], 400, true)}</div>
-    ${l.why ? `<div class="why">${l.ratio ? `<span class="pill warn">⚠ 推奨数の ${l.ratio} 倍</span> ` : ""}${esc(l.forecast?.basis ?? "")}</div>` : ""}
-  </div>`;
-}
+// ---- 承認のカード ----------------------------------------------------------------
 
-function vApprove(el: HTMLElement) {
-  const s = S!;
-  const a = s.approval_request;
-  if (!a || a.approver !== user) {
-    const ok = [...s.audit].reverse().find((x) => x.agent === user);
-    el.innerHTML = `<section class="card done">
-      <div class="check">${ok ? "✓" : "…"}</div>
-      <h2>${ok ? "承認済み" : a ? `この依頼は${esc(a.approver_label)}宛てです` : "承認の依頼はありません"}</h2>
-      <p class="muted">${ok ? `${ok.time} に承認しました。本部と店のシステムに反映されています。` : a ? "右上のアイコンで切り替えられます。" : "依頼が届くと、ここに表示されます。"}</p>
-    </section>`;
-    return;
-  }
+function approval(): string {
+  const a = S!.approval_request!;
   const isTransfer = a.kind === "transfer";
-  const est = isTransfer ? s.uc3!.context.estimates?.find((e) => e.store === me().store && e.product === (a.lines[0] as Transfer).product) : null;
-  el.innerHTML = `
-    <section class="card">
-      <div class="eyebrow">承認の依頼 ・ ${esc(a.plan)}</div>
-      <h2 style="margin-top:6px">${esc(a.message)}</h2>
-      <p class="sub">本部の点検（SHACL）は合格済み。${isTransfer ? "上限（50個かつ15,000円）を超える受け入れなので、受け入れる店の店長の承認が要ります。" : "推奨数の1.5倍を超えるので、店長の承認が要ります。"}</p>
-      ${isTransfer ? (a.lines as (Transfer & { why: string })[]).map(transferItem).join("") +
-        (est ? `<div class="context" style="margin-top:12px"><div class="ic">📦</div><div><b>いまの在庫 ${est.stock}、閉店までに売れる見込み ${est.rest}</b>
-          <span>${est.runout ? `${Math.floor(est.runout)}時ごろ品切れの見込み ・ ` : ""}足りない数 ${-est.balance}</span></div></div>` : "")
-        : legend() + (a.lines as (Line & { why: string })[]).map(lineItem).join("")}
+  return `<section class="card ask">
+      <div class="ask-head"><span class="pulse"></span>判断が必要です</div>
+      <p class="ask-msg">${esc(a.message)}</p>
+      ${isTransfer ? (a.lines as Transfer[]).map(transferItem).join("") : (a.lines as Line[]).map(lineItem).join("")}
+      <div class="ai-note">🛡 AI の案は本部のルール点検に合格済みです</div>
     </section>
-    <div class="cta">
-      <button class="btn" id="approve" ${sending ? "disabled" : ""}>${sending ? "送信中…" : isTransfer ? "受け入れを承認する" : `${a.lines.length}品の発注を承認する`}</button>
-    </div>`;
-  $("#approve").onclick = () => void approve();
+    <div class="cta"><button class="btn" id="approve" ${sending ? "disabled" : ""}>${sending ? "送信中…" : isTransfer ? "受け入れる" : `${a.lines.length}品の発注を承認`}</button></div>`;
 }
 
-function noticeList(limit = 50): string {
+function lineItem(l: Line): string {
+  const reasons = l.reason.replace(/近くのイベント E-\d+/, "近くの試合").split("、");
+  return `<div class="item">
+    <div class="item-top">
+      <div><div class="name">${esc(l.name)}</div><div class="reasons">${reasons.map((r) => `<span>${esc(r)}</span>`).join("")}</div></div>
+      <div class="qty">${l.recommended != null ? `<s>${l.recommended}</s>` : ""}<b>${l.quantity}</b>${l.ratio ? `<em>×${l.ratio}</em>` : ""}</div>
+    </div>
+    <div class="viz">${orderRangeChart([l], 400, true)}</div>
+  </div>`;
+}
+
+function transferItem(t: Transfer): string {
+  const est = S!.uc3!.context.estimates?.find((e) => e.store === store() && e.product === t.product);
+  return `<div class="route">
+      <div class="stop"><b>${storeName(t.source)}</b><span>余り</span></div>
+      <div class="truck"><span>🚚 ${t.vehicle}</span><i></i><span>${t.eta} 着</span></div>
+      <div class="stop me"><b>${storeName(t.dest)}</b><span>あなたの店</span></div>
+    </div>
+    <div class="item-top"><div class="name">${esc(t.name)}</div><div class="qty"><b>${t.quantity}</b></div></div>
+    ${est ? `<div class="reasons"><span>在庫 ${est.stock}</span><span>閉店まで ${est.rest} 売れる見込み</span>${est.runout ? `<span>${Math.floor(est.runout)}時ごろ品切れ</span>` : ""}</div>` : ""}`;
+}
+
+// ---- お知らせ ------------------------------------------------------------------
+
+function timeline(): string {
   const s = S!;
-  const fromAudit = s.audit.map((a) => ({ time: a.time, title: a.label, body: `${a.agent.startsWith("manager") ? "店長が承認" : "方針により自動"}${a.rule ? ` ・ ${a.rule}` : ""}`,
-    approved: a.agent.startsWith("manager"), chips: a.generated.map((g) => g.split("/").pop()!) }));
-  const fromUc2 = (s.uc2?.notifications ?? []).map((n) => ({ time: n.time, title: n.title, body: n.body, approved: false, chips: [] as string[] }));
-  const items = [...fromAudit, ...fromUc2].sort((x, y) => y.time.localeCompare(x.time)).slice(0, limit);
-  return items.length ? items.map((n) => `<div class="notice"><div class="dot">${n.approved ? "✓" : "⚙"}</div>
-    <div><b>${esc(n.title)}</b><span>${esc(n.time)} ・ ${esc(n.body)}</span>
-    <div>${n.chips.slice(0, 6).map((c) => `<span class="chip">${esc(c)}</span>`).join("")}${n.chips.length > 6 ? `<span class="chip">ほか ${n.chips.length - 6}</span>` : ""}</div></div></div>`).join("")
-    : `<p class="empty">まだお知らせはありません</p>`;
-}
-
-function vNotices(el: HTMLElement) {
-  el.innerHTML = `<section class="card"><h2>お知らせ</h2><p class="sub">自動で確定したことも、すべてここに届きます</p>${noticeList()}</section>`;
+  const items = [
+    ...s.audit.map((a) => ({ time: a.time, title: a.label, body: a.rule ?? "", kind: a.agent.startsWith("manager") ? "ok" : "auto" })),
+    ...(s.uc2?.notifications ?? []).map((n) => ({ time: n.time, title: n.title, body: n.body, kind: n.title.includes("戻しました") ? "warn" : "auto" })),
+  ].sort((x, y) => y.time.localeCompare(x.time));
+  const icon: Record<string, string> = { ok: "✓", auto: "⚡", warn: "↺" };
+  return `<section class="card"><h2>AI がやったこと</h2>
+    ${items.map((n) => `<div class="tl ${n.kind}"><div class="dot">${icon[n.kind]}</div>
+      <div><b>${esc(n.title)}</b>${n.body ? `<p>${esc(n.body)}</p>` : ""}</div><time>${esc(n.time)}</time></div>`).join("")
+      || `<div class="empty-tl"><div>☕</div>まだ何もありません。<br>AI が動いたら、ここに届きます。</div>`}
+  </section>`;
 }

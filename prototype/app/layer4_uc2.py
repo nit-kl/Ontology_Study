@@ -99,12 +99,12 @@ class EnergyAgent:
             "other_kw": round(other, 1), "defrost_in_peak": peak_defrost, "defrost_kw": defrost_kw,
             "projected_kw": round(projected, 1), "adjustable": list(eq.values()), "defrost_schedule": all_defrost,
         }
-        self.log("L4", "AI", "ナレッジグラフに予報・電力メーター・動かせる設備を問い合わせ（SPARQL）",
+        self.log("L4", "AI", "天気予報、電力の使用量、調整できる設備を調べた",
                  {"予報": max_t, "直近のデマンド": meter["latest"], "契約電力": meter["contract"]})
-        self.log("L3", "OWL", "推論: ピークに動かせる設備（動かせる幅を持つ設備）",
+        self.log("L3", "推論", "ピーク時に調整できる設備を割り出した",
                  {"霜取りがピークに重なる冷蔵ケース": peak_defrost,
                   "予冷・設定・調光できる設備": [e["id"] for e in eq.values() if e["type"] != "RefrigeratedCase"]})
-        self.log("L4", "AI", f"何もしないと 14:00〜15:00 のデマンドは {projected:.0f}kW（契約電力 {meter['contract']}kW）",
+        self.log("L4", "AI", f"このままだと 14〜15時の電力は {projected:.0f}kW（契約 {meter['contract']}kW）",
                  {"その他の負荷": round(other, 1), "空調・照明・冷凍": equipment_now, "霜取り": defrost_kw})
         return self.context
 
@@ -155,7 +155,7 @@ class EnergyAgent:
             steps.append({"kind": group[0].kind, "saving": round(sum(s.saving_kw for s in group), 1), "after": round(level, 1)})
         ctx["planned_kw"] = round(level, 1)
         ctx["steps"] = steps
-        self.log("L4", "AI", f"電力ピークの方針の順に調整を足す（目標 {target:.0f}kW 以下）→ 見込み {level:.0f}kW", steps)
+        self.log("L4", "AI", f"優先順に調整を足して、見込みを {level:.0f}kW に下げた（目標 {target:.0f}kW 以下）", steps)
         return chosen
 
     def revert(self, equipment: str) -> Setting:
@@ -246,19 +246,19 @@ class PeakWorkflow(Workflow):
 
     def act_start(self) -> None:
         self.set_time("12:30")
-        self.log("L4", "KINETIC", "毎日 12:30 のスケジュールで「電力ピーク対策」ワークフローが起動")
-        self.log("L4", "KINETIC", "AI に今日の電力調整の案を依頼")
+        self.log("L4", "ワークフロー", "12:30 になったので「電力ピーク対策」を始めた")
+        self.log("L4", "ワークフロー", "AI に今日の電力調整の案を頼んだ")
         self.agent.gather(self.day)
         proposal = self.agent.propose()
         res = self.gate.pre_validate(settings_graph(proposal, self.day))
         self.record_validation("事前検証", res)
         if not res.conforms:
-            self.log("L3", "SHACL", "事前検証: 不合格", res.results)
+            self.log("L3", "ルール点検", "調整案をルールで点検: 問題あり", res.results)
             self.state = "失敗"
             return
-        self.log("L3", "SHACL", "事前検証: 合格（食品安全・霜取りの間隔・売場の快適性・動かせる設備）")
+        self.log("L3", "ルール点検", "調整案をルールで点検: 問題なし（食品の温度・霜取りの間隔・売場の暑さ）")
         needs = self.gate.needs_approval(settings_graph(proposal, self.day))
-        self.log("L3", "SHACL", "承認の要否: " + ("方針の範囲内なので不要" if not needs else "店長の承認が要る"), needs or None)
+        self.log("L3", "ルール点検", "店長の承認: " + ("範囲内なので不要" if not needs else "必要"), needs or None)
         for s in proposal:
             self.settings[s.key] = s
         self.set_time("12:35")
@@ -266,10 +266,9 @@ class PeakWorkflow(Workflow):
                             "設備操作の範囲（自動で動かしてよい範囲）の中")
         self.record_validation("確定（承認の点検を含む）", res)
         note = {"time": "12:35", "title": "本日の電力調整（自動）",
-                "body": "、".join(sorted({s.label.split(" の")[0].split(" を")[0] for s in proposal})) +
-                        f" を調整。見込みのデマンド {self.agent.context['planned_kw']:.0f}kW"}
+                "body": f"霜取り・冷凍ケース・空調・照明を調整。ピークの見込みは {self.agent.context['planned_kw']:.0f}kW"}
         self.notifications.append(note)
-        self.log("L5", "業務画面", "店長のタブレットに通知（承認は不要）", note)
+        self.log("L5", "店長アプリ", "店長に知らせた（承認は不要）", note)
         self.state = "実行待ち"
 
     def act_advance(self) -> None:
@@ -280,7 +279,7 @@ class PeakWorkflow(Workflow):
             self.state = "実行中"
         row = self.l1.bms.tick(t)
         stream_readings(self.kg, STORE, t, row, self.ctx.lake)
-        self.log("L1", "BMS", f"計測 {row['kw']:.0f}kW、ZT-2 {row['ZT-2']}℃、FZ-01 {row['FZ-01-T1']}℃",
+        self.log("L1", "BMS", f"電力 {row['kw']:.0f}kW、窓際の売場 {row['ZT-2']}℃、冷凍ケース {row['FZ-01-T1']}℃",
                  {k: v for k, v in row.items() if k != "time"})
         peak = self.agent.context["peak"]
         if peak[0] <= hours(t) <= peak[1]:
@@ -288,25 +287,25 @@ class PeakWorkflow(Workflow):
             self.monitor_log.append({"time": t, "conforms": result.conforms, "results": result.results})
             self.record_validation(f"見張り {t}", result)
             if result.conforms:
-                self.log("L3", "SHACL", f"見張り {t}: 違反なし（売場の温度・ケースの温度）")
+                self.log("L3", "ルール点検", f"{t} の温度チェック: 問題なし")
             else:
-                self.log("L3", "SHACL", f"見張り {t}: 違反", result.results)
+                self.log("L3", "ルール点検", f"{t} の温度チェック: 基準を超えた", result.results)
                 for r in result.results:
                     if r["check"] == "売場の快適性":
                         ahu = r["message"].rsplit(": ", 1)[-1]
                         self._revert(t, ahu, r)
         if t == TIMES[-1]:
             peak_kw = max(h["kw"] for h in self.l1.bms.history if hours(h["time"]) >= 12.75)
-            self.log("L1", "電力メーター", f"今日のピークのデマンドは最大 {peak_kw:.0f}kW（契約電力 {self.l1.bms.contract_kw}kW）")
-            self.log("L4", "KINETIC", "ピークの時間が終わり、ワークフローが終わる")
+            self.log("L1", "電力メーター", f"今日の電力の最大は {peak_kw:.0f}kW（契約 {self.l1.bms.contract_kw}kW）")
+            self.log("L4", "ワークフロー", "ピークの時間が過ぎたので完了")
             self.notifications.append({"time": t, "title": "電力調整の結果",
                                        "body": f"今日のピークは最大 {peak_kw:.0f}kW。契約電力の範囲内でした"})
             self.state = "完了"
 
     def _revert(self, t: str, ahu: str, violation: dict) -> None:
-        self.log("L4", "KINETIC", f"{violation['focus']} の違反を受けて、AI に {ahu} の戻しを頼む")
+        self.log("L4", "ワークフロー", f"売場（{violation['focus']}）の温度が基準を超えたので、AI に空調 {ahu} を元に戻すよう頼んだ")
         s = self.agent.revert(ahu)
-        self.log("L4", "AI", f"「{ahu} だけ 25℃ に戻す」を出す（元に戻す操作なので承認不要）")
+        self.log("L4", "AI", f"空調 {ahu} だけ 25℃ に戻す案を出した（元に戻すだけなので承認は不要）")
         self.settings[s.key] = s
         if f"{ahu}-setpoint" in self.settings:
             self.settings[f"{ahu}-setpoint"].status = "取り消し"
@@ -314,18 +313,18 @@ class PeakWorkflow(Workflow):
         self.record_validation(f"確定（{ahu} の戻し）", res)
         note = {"time": t, "title": f"{ahu} を元に戻しました", "body": violation["message"]}
         self.notifications.append(note)
-        self.log("L5", "業務画面", "店長のタブレットに知らせ", note)
+        self.log("L5", "店長アプリ", "店長に知らせた", note)
 
     def on_confirmed(self, event: dict) -> None:
         settings = self.pending
         for s in settings:
             if s.status != "取り消し":
                 s.status = "確定"
-        self.log("L3", "SHACL", "合格 → SPARQL Update 成功 → 確定イベントを発行", event)
-        self.log("L5", "ガバナンス", "監査グラフに来歴を記録（PROV-O）", self.gate.audit.entries[-1])
+        self.log("L3", "ルール点検", "点検に合格したので確定した", event)
+        self.log("L5", "監査記録", "誰が何をもとに決めたかを記録した", self.gate.audit.entries[-1])
         cmds = bms_commands(settings)
         self.l1.bms.apply(self.ctx_time(event), cmds)
-        self.log("L1", "BMS", f"時刻つきの設定を {len(cmds)} 件受け付け（BMS の制御コマンド）", cmds)
+        self.log("L1", "BMS", f"設備の設定を {len(cmds)} 件受け取った", cmds)
 
     @staticmethod
     def ctx_time(event: dict) -> str:

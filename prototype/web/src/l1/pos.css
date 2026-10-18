@@ -1,44 +1,22 @@
 /* Windows 98 の業務アプリ風。灰色の立体枠、紺のタイトルバー、ＭＳ ゴシック */
 body { margin: 0; background: #008080; font: 12px/1.4 "MS PGothic", "ＭＳ Ｐゴシック", "MS UI Gothic", sans-serif; color: #000; }
-.desktop { padding: 14px 14px 46px; min-height: 100vh; box-sizing: border-box; }
+.desktop { padding: 14px; min-height: 100vh; box-sizing: border-box; }
 .win { max-width: 1100px; margin: 0 auto; background: #c0c0c0; border: 2px solid; border-color: #fff #404040 #404040 #fff;
   box-shadow: 1px 1px 0 #000; }
 .title { background: linear-gradient(90deg, #000080, #1084d0); color: #fff; font-weight: bold; padding: 3px 4px; display: flex; align-items: center; gap: 4px; }
-.title .ico { font-size: 11px; }
-.title .ctrl { margin-left: auto; display: flex; gap: 2px; }
-.title .ctrl b { width: 16px; height: 14px; background: #c0c0c0; color: #000; font: bold 10px sans-serif; display: grid; place-items: center;
-  border: 1px solid; border-color: #fff #404040 #404040 #fff; }
-.menu { display: flex; gap: 12px; padding: 2px 6px; border-bottom: 1px solid #808080; }
-.toolbar { display: flex; gap: 2px; padding: 3px 4px; border-bottom: 1px solid #808080; box-shadow: 0 1px 0 #fff; }
+.toolbar { display: flex; gap: 2px; align-items: center; padding: 3px 4px; border-bottom: 1px solid #808080; box-shadow: 0 1px 0 #fff; }
 .btn { font: inherit; background: #c0c0c0; border: 2px solid; border-color: #fff #404040 #404040 #fff; padding: 2px 10px; cursor: pointer; min-width: 74px; }
 .btn:active, .btn.on { border-color: #404040 #fff #fff #404040; background: #d4d0c8; }
-.btn:disabled { color: #808080; text-shadow: 1px 1px 0 #fff; cursor: default; }
-.content { display: grid; grid-template-columns: 170px 1fr; gap: 6px; padding: 6px; }
-.side { background: #fff; border: 2px solid; border-color: #808080 #fff #fff #808080; padding: 4px; min-height: 360px; }
-.side div { padding: 2px 4px; cursor: pointer; }
-.side div::before { content: "📄 "; }
-.side div.on { background: #000080; color: #fff; }
+.content { padding: 6px; }
 .main { min-width: 0; }
-.group { border: 1px solid #808080; box-shadow: 1px 1px 0 #fff inset, 1px 1px 0 #fff; padding: 10px 8px 8px; position: relative; margin-bottom: 10px; }
-.group > .cap { position: absolute; top: -8px; left: 8px; background: #c0c0c0; padding: 0 4px; }
-.fields { display: flex; gap: 14px; flex-wrap: wrap; }
-.field input { font: 12px "MS Gothic", monospace; background: #fff; border: 2px solid; border-color: #808080 #fff #fff #808080; padding: 1px 3px; width: 120px; }
 .grid { background: #fff; border: 2px solid; border-color: #808080 #fff #fff #808080; overflow: auto; max-height: 420px; }
 .grid table { border-collapse: collapse; width: 100%; font: 12px "MS Gothic", "ＭＳ ゴシック", monospace; }
 .grid th { background: #c0c0c0; border: 1px solid; border-color: #fff #808080 #808080 #fff; padding: 2px 6px; text-align: left; font-weight: normal; position: sticky; top: 0; }
 .grid td { border-right: 1px solid #c0c0c0; border-bottom: 1px solid #e0e0e0; padding: 1px 6px; white-space: nowrap; }
 .grid td.n { text-align: right; }
-.grid tr.sel td { background: #000080; color: #fff; }
 .grid tr.new td { color: #c00000; font-weight: bold; }
 .empty { padding: 20px; color: #404040; }
-.status { display: flex; gap: 2px; padding: 2px; }
-.status .pane { border: 1px solid; border-color: #808080 #fff #fff #808080; padding: 1px 6px; flex: 1; }
-.status .pane:last-child { flex: 0 0 140px; }
-.taskbar { position: fixed; left: 0; right: 0; bottom: 0; height: 30px; background: #c0c0c0; border-top: 2px solid #fff;
-  display: flex; align-items: center; gap: 6px; padding: 0 4px; }
-.taskbar .start { font-weight: bold; border: 2px solid; border-color: #fff #404040 #404040 #fff; padding: 1px 8px; }
-.taskbar .task { border: 2px solid; border-color: #404040 #fff #fff #404040; padding: 1px 10px; background: #d4d0c8; min-width: 160px; }
-.taskbar .tray { margin-left: auto; border: 1px solid; border-color: #808080 #fff #fff #808080; padding: 1px 8px; }
-.back-to-hub { position: fixed; right: 110px; bottom: 7px; font: 11px sans-serif; color: #000080; z-index: 3; }
-.toast { position: fixed; right: 10px; bottom: 40px; background: #ffffe1; border: 1px solid #000; padding: 6px 10px; box-shadow: 2px 2px 0 #808080; }
+.back-to-hub { position: fixed; right: 8px; bottom: 6px; font: 11px sans-serif; color: #000080; z-index: 3; }
+.toast { position: fixed; right: 10px; bottom: 30px; background: #ffffe1; border: 1px solid #000; padding: 6px 10px; box-shadow: 2px 2px 0 #808080; }
 .toast::before { content: "ⓘ "; color: #000080; }
+#store { margin-left: auto; font: inherit; }

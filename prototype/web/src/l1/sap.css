@@ -4,29 +4,8 @@ body { margin: 0; background: #6d7f8f; font: 12px/1.35 "MS UI Gothic", "Meiryo U
   box-shadow: 2px 2px 0 #3a4a5a; min-height: calc(100vh - 26px); display: flex; flex-direction: column; }
 .titlebar { background: linear-gradient(#3c5f86, #23405f); color: #fff; padding: 3px 6px; display: flex; gap: 8px; align-items: center; font-weight: bold; }
 .titlebar .logo { background: linear-gradient(#58a8e8, #1f6fb5); color: #fff; font: bold italic 11px Arial, sans-serif; padding: 0 5px; border: 1px solid #a9d1f3; }
-.titlebar .winbtns { margin-left: auto; letter-spacing: 6px; font-weight: normal; }
-.menubar { background: #eef2f6; border-bottom: 1px solid #a7b4c2; padding: 2px 4px; display: flex; gap: 14px; }
-.menubar span { padding: 1px 4px; cursor: default; }
-.menubar span:hover { background: #c5d5e6; }
-.systoolbar { background: linear-gradient(#f4f7fa, #d6dfe8); border-bottom: 1px solid #9aabbc; padding: 3px 6px; display: flex; gap: 4px; align-items: center; }
-.okbtn { background: #2f8a2f; color: #fff; width: 18px; height: 18px; display: inline-grid; place-items: center; border: 1px solid #1d5c1d; font-size: 11px; cursor: pointer; }
-.okcode { width: 150px; height: 18px; border: 1px solid #7f93a8; font: 12px "MS Gothic", Consolas, monospace; padding: 0 3px; background: #fff; }
-.tb { width: 20px; height: 18px; display: inline-grid; place-items: center; border: 1px solid transparent; font-size: 11px; cursor: pointer; filter: grayscale(.6); }
-.tb:hover { border-color: #7f93a8; background: #eaf0f6; }
-.sep { width: 1px; height: 16px; background: #9aabbc; margin: 0 4px; }
-.screentitle { background: #c9d6e3; border-bottom: 1px solid #9aabbc; padding: 4px 8px; font-size: 14px; font-weight: bold; color: #1c3550; }
 .apptoolbar { background: #e7edf3; border-bottom: 1px solid #b4c1ce; padding: 3px 6px; display: flex; gap: 4px; min-height: 22px; }
-.apptoolbar button { font: inherit; background: linear-gradient(#fdfdfd, #dfe6ee); border: 1px solid #8a9cb0; padding: 1px 8px; cursor: pointer; }
-.apptoolbar button:hover { background: #fff6c7; }
 .body { flex: 1; padding: 8px 10px; overflow: auto; }
-.tree { font: 12px "MS UI Gothic", Tahoma, sans-serif; }
-.tree ul { list-style: none; margin: 0; padding-left: 18px; }
-.tree li { padding: 1px 0; white-space: nowrap; }
-.tree .folder::before { content: "📁 "; }
-.tree .tx { cursor: pointer; }
-.tree .tx::before { content: "◇ "; color: #2f6fa8; }
-.tree .tx:hover { background: #fff3a8; }
-.tree code { color: #4d5f72; margin-right: 6px; }
 fieldset { border: 1px solid #94a6b9; margin: 0 0 8px; padding: 4px 8px 6px; background: #edf2f7; }
 legend { color: #1c3550; font-weight: bold; padding: 0 3px; }
 .form { display: grid; grid-template-columns: 140px 220px 140px 220px; gap: 3px 6px; align-items: center; }
@@ -40,9 +19,5 @@ table.alv { border-collapse: collapse; width: 100%; background: #fff; font: 12px
 .alv td.n { text-align: right; }
 .alv .changed td { background: #fff1b0 !important; }
 .empty { color: #5a6b7c; padding: 12px 2px; }
-.statusbar { background: linear-gradient(#e6ecf2, #cfd9e3); border-top: 1px solid #8fa2b5; padding: 3px 8px; display: flex; gap: 10px; }
-.statusbar .msg::before { content: "■ "; color: #2f8a2f; }
-.statusbar .msg.warn::before { color: #d18b00; }
-.statusbar .sysinfo { margin-left: auto; color: #34495e; }
 .back-to-hub { position: fixed; right: 8px; bottom: 6px; font: 11px sans-serif; color: #e7eef5; }
 .toast { position: fixed; bottom: 34px; left: 50%; transform: translateX(-50%); background: #fff8d0; border: 1px solid #b59a2a; padding: 4px 12px; }

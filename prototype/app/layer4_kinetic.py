@@ -57,8 +57,8 @@ class TomorrowOrderWorkflow(Workflow):
 
     def act_start(self) -> None:
         self.set_time("10:00")
-        self.log("L4", "KINETIC", "毎日 10:00 のスケジュールで「明日の発注」ワークフローが起動（締めは 11:00）")
-        self.log("L4", "KINETIC", "AI に1号店の明日の発注案を依頼")
+        self.log("L4", "ワークフロー", "10:00 になったので「明日の発注」を始めた（締め切り 11:00）")
+        self.log("L4", "ワークフロー", "AI に1号店の発注案を頼んだ")
         self.set_time("10:05")
         plan = self.agent.plan_tomorrow(C.DEMO_STORE, C.TOMORROW, PLAN_ID)
         self.plan = plan
@@ -70,17 +70,17 @@ class TomorrowOrderWorkflow(Workflow):
             self.record_validation(f"事前検証 {attempt} 回目", result)
             if result.conforms:
                 break
-            self.log("L3", "SHACL", f"事前検証 {attempt} 回目: 不合格", result.results)
+            self.log("L3", "ルール点検", f"発注案をルールで点検（{attempt} 回目）: 問題あり", result.results)
             if not self.agent.fix(plan, result):
                 self.state = "失敗"
-                self.log("L4", "KINETIC", "AI が案を直せなかったので止める")
+                self.log("L4", "ワークフロー", "AI が案を直せなかったので中止した")
                 return
-            self.log("L4", "AI", "不合格の理由を見て案を直し、再提出",
+            self.log("L4", "AI", "指摘に合わせて案を直した",
                      {p: ln.history for p, ln in plan.lines.items() if len(ln.history) > 1})
         else:
             self.state = "失敗"
             return
-        self.log("L3", "SHACL", f"事前検証 {attempt} 回目: 合格")
+        self.log("L3", "ルール点検", f"発注案をルールで点検（{attempt} 回目）: 問題なし")
 
         # 承認の要否は SHACL の承認の点検が決める
         needs = {focus.rsplit("/", 1)[-1]: m for focus, m in self.gate.needs_approval(plan.to_graph()).items()}
@@ -88,7 +88,7 @@ class TomorrowOrderWorkflow(Workflow):
         auto = [p for p in plan.lines if p not in need_products]
         for p in plan.lines:
             plan.lines[p].status = "承認待ち" if p in need_products else "承認不要"
-        self.log("L3", "SHACL", "承認の要否",
+        self.log("L3", "ルール点検", "店長の承認が要る品目を判定した",
                  {"承認不要": auto, "店長の承認が要る": needs})
 
         # 承認の要らない明細は、そのまま確定
@@ -108,7 +108,7 @@ class TomorrowOrderWorkflow(Workflow):
                       for p in need_products],
         }
         self.state = "承認待ち"
-        self.log("L5", "業務画面", "1号店の店長のタブレットに承認依頼", self.approval_request["message"])
+        self.log("L5", "店長アプリ", "1号店の店長に承認を頼んだ", self.approval_request["message"])
 
     # ---- 2. 承認を受けて確定 ------------------------------------------------------
 
@@ -118,26 +118,26 @@ class TomorrowOrderWorkflow(Workflow):
         for p in products:
             ln = self.plan.lines[p]
             ln.approved_by, ln.approved_quantity = approver, ln.quantity
-        self.log("L5", "店長", "タブレットで「承認する」をタップ", {"approver": approver, "lines": products})
+        self.log("L5", "店長", "発注を承認した", {"approver": approver, "lines": products})
         at = len(self.validations)   # 確定イベントの中で数量の修正が先に記録されるので、順番を保つ
         res = self._confirm(products, "10:30", C.PERSON[approver], "1号店の店長が、推奨数の1.5倍を超える発注を承認")
         self.record_validation("再検証（承認付き）", res, at)
         if not res.conforms:
             for p in products:
                 self.plan.lines[p].status = "却下"
-            self.log("L3", "SHACL", "再検証: 不合格", res.results)
+            self.log("L3", "ルール点検", "承認後の点検: 問題あり", res.results)
             self.state = "締め待ち"
             return
         self.approval_request = None
         self.state = "締め待ち"
         self.set_time("11:00")
-        self.log("L4", "KINETIC", "11:00 発注の締め。明日の朝の受け入れまで待つ")
+        self.log("L4", "ワークフロー", "11:00 発注を締め切った。明日の朝の入荷を待つ")
 
     # ---- 3. 翌朝の受け入れ ------------------------------------------------------
 
     def act_advance(self) -> None:
         self.set_time("翌 05:00")
-        self.log("L1", "WMS", "東部 DC から1号店へ出荷", self.l1.wms.allocations.get(STO_ID))
+        self.log("L1", "WMS", "東部DCから1号店へ出荷した", self.l1.wms.allocations.get(STO_ID))
         self.set_time("翌 06:40")
         lines = self.l1.sap.orders[STO_ID]["lines"]
         # 閉店までに売れて、朝に残った数（AI の見込みどおりだったとする）から受け入れる
@@ -145,8 +145,8 @@ class TomorrowOrderWorkflow(Workflow):
             self.l1.pos.state[self.plan.store].setdefault(p, {"stock": 0, "sold_today": 0})["stock"] = ln.morning_stock
         self.l1.pos.receive(self.plan.store, lines)
         self.l1.staff.complete_all(self.plan.store)
-        self.log("L1", "スタッフ端末", "1号店で受け入れをスキャン。POS の店頭在庫が増える", lines)
-        self.log("L4", "KINETIC", "受け入れの完了を受けて、ワークフローが終わる")
+        self.log("L1", "スタッフ端末", "1号店で入荷を検品し、在庫に反映した", lines)
+        self.log("L4", "ワークフロー", "入荷が終わったので完了")
         self.state = "完了"
 
     # ---- 確定イベントを受けて書き戻す ---------------------------------------------------
@@ -155,15 +155,15 @@ class TomorrowOrderWorkflow(Workflow):
         lines: dict[str, int] = event["data"]["lines"]
         for p in lines:
             self.plan.lines[p].status = "確定"
-        self.log("L3", "SHACL", "合格 → SPARQL Update 成功 → 確定イベントを発行", event)
-        self.log("L5", "ガバナンス", "監査グラフに来歴を記録（PROV-O）", self.gate.audit.entries[-1])
+        self.log("L3", "ルール点検", "点検に合格したので確定した", event)
+        self.log("L5", "監査記録", "誰が何をもとに決めたかを記録した", self.gate.audit.entries[-1])
         self._write_back(lines)
 
     def _write_back(self, lines: dict[str, int]) -> None:
         store = self.plan.store
         dc = "DC-01"
         order = self.l1.sap.upsert_order(STO_ID, store, dc, self.plan.delivery_date, lines)
-        self.log("L1", "SAP", f"補充発注 {STO_ID} に書き戻し（BAPI）", order["lines"])
+        self.log("L1", "SAP", f"発注伝票 {STO_ID} を登録した", order["lines"])
         codes = self._wholesale_codes(list(lines))
         shortages = {}
         for p, q in lines.items():
@@ -171,7 +171,7 @@ class TomorrowOrderWorkflow(Workflow):
             if not r["ok"]:
                 shortages[p] = r
         self.l1.pos.set_incoming(store, {p: q for p, q in lines.items() if p not in shortages})
-        self.log("L1", "WMS / POS", "DC の出荷への引き当てと、1号店の入荷予定（Webhook）",
+        self.log("L1", "WMS / POS", "DC の在庫を確保し、1号店に入荷予定を送った",
                  {"引き当て": {p: q for p, q in lines.items() if p not in shortages},
                   "引き当てられない": shortages})
         if any(self.plan.lines[p].forecast for p in lines if p not in shortages):
@@ -182,7 +182,7 @@ class TomorrowOrderWorkflow(Workflow):
             self.l1.staff.upsert_task("island", store, "翌 06:30", f"入口に島陳列を作る（{names}）")
             if any(ln.product == "R-3901" for ln in boosted):
                 self.l1.staff.upsert_task("ice", store, "翌 06:30", "冷凍ケース FZ-01 に氷を補充する")
-            self.log("L1", "スタッフ端末", "明日の朝の作業を登録", [t["text"] for t in self.l1.staff.tasks])
+            self.log("L1", "スタッフ端末", "明日の朝の作業を登録した", [t["text"] for t in self.l1.staff.tasks])
 
         cdc = sync_cdc(self.l1, self.kg)
         if cdc:
@@ -191,16 +191,15 @@ class TomorrowOrderWorkflow(Workflow):
                     GRAPH <{C.G_PLANS}> {{ ?l ex:product ?p ; ex:quantity ?planned . }}
                     GRAPH <{C.G_CDC}> {{ ?s ex:product ?p ; ex:quantity ?sap . }}
                     FILTER (?planned != ?sap) }}""", inferred=False)
-            self.log("L2", "ETL", "SAP の変更を CDC で読み、ストアへ。確定した発注計画と"
-                     + ("一致" if not diff else f"{len(diff)} 件ずれている"), cdc)
+            self.log("L2", "データ取り込み", "SAP の発注伝票を取り込み、確定した計画と照合: "
+                     + ("一致" if not diff else f"{len(diff)} 件ずれ"), cdc)
 
         for p, r in shortages.items():
-            self.log("L4", "KINETIC", f"WMS が受け付けない: {p}（卸側 {r['code']}）は DC に {r['available']} しか残らない。"
-                     "AI に数量の修正を頼む")
+            self.log("L4", "ワークフロー", f"DC に「{self.plan.lines[p].name}」が {r['available']} しかないと断られたので、AI に数量の修正を頼んだ")
             self.set_time("10:33")
             q = self.agent.reduce_to_available(self.plan, p, r["available"])
-            self.log("L4", "AI", f"{p} を {q} に減らす（減らすだけなので承認不要）")
-            res = self._confirm([p], "10:34", C.EX.OrderPolicy, f"DC の在庫に合わせて {p} を {q} に減らす",
+            self.log("L4", "AI", f"「{self.plan.lines[p].name}」を {q} に減らした（減らすだけなので承認は不要）")
+            res = self._confirm([p], "10:34", C.EX.OrderPolicy, f"DC の在庫に合わせて{self.plan.lines[p].name}を {q} に減らす",
                                 rule="発注の数量を減らすのは承認不要")
             self.record_validation(f"確定（{p} の数量の修正）", res)
 

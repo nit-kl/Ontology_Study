@@ -35,7 +35,7 @@ class Demo:
 
         # レイヤー2 がレイヤー1 のコピーを三つ組にしてストアへ入れる
         self.etl_report = load_all(self.layer1, self.kg)
-        self.log("L2", "ETL", "レイヤー1 のマスタ・台帳・棚割・推奨数・予報・イベント・ルートを三つ組に変換してストアへ",
+        self.log("L2", "データ取り込み", "基幹システムのデータをナレッジグラフに取り込んだ",
                  self.etl_report)
 
         # レイヤー5 の画面に出す ODRL の権限（誰が、どの店の、何を承認できるか）
@@ -53,13 +53,13 @@ class Demo:
             self.model = DemandModel(C.LAKE_DIR / "sales_history.csv")
             self.kg.update(f"""INSERT DATA {{ GRAPH <{C.G_STATE}> {{
                 model:{self.model.version} a ex:ForecastModel ; ex:status ex:Active . }} }}""")
-            self.log("L4", "需要予測モデル", f"履歴の蓄積先で学習した {self.model.version} を運用中として登録")
+            self.log("L4", "需要予測", f"過去の販売データで学習した予測モデル {self.model.version} を使い始めた")
             self.workflow = TomorrowOrderWorkflow(ctx, self.model)
         elif scenario == "uc2":
             # 12:30 の時点の計測値が、ストリームでストアの最新の観測に入っている
             first = self.layer1.bms.history[0]
             stream_readings(self.kg, "ST-014", first["time"], first, self.lake)
-            self.log("L2", "ETL", "BMS と電力メーターの計測値をストリームで受け、最新の観測を差し替え",
+            self.log("L2", "データ取り込み", "設備と電力メーターの最新の計測値を取り込んだ",
                      {k: v for k, v in first.items() if k != "time"})
             self.workflow = PeakWorkflow(ctx)
         else:

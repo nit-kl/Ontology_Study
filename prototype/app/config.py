@@ -13,6 +13,12 @@ KNOWLEDGE_DIR = ROOT / "knowledge"
 TODAY = date(2026, 10, 23)      # UC1・UC3 の「今日」（金曜）
 TOMORROW = date(2026, 10, 24)   # UC1 の発注の対象日（土曜）
 DEMO_STORE = "ST-014"
+STORE_NAMES = {"ST-014": "1号店", "ST-031": "2号店", "ST-040": "3号店", "DC-01": "東部DC"}
+
+
+def store_name(site: str) -> str:
+    return STORE_NAMES.get(site, site)
+
 
 # シナリオごとの日付。UC2 は資料どおり、暑い夏の日にする
 SCENARIOS = {

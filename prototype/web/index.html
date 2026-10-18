@@ -7,20 +7,14 @@
 </head>
 <body>
   <header class="top">
-    <h1>デモ司令塔 <small id="subtitle">-</small></h1>
+    <nav class="scenarios" id="scenarios"></nav>
     <div class="clockbox"><div class="clock" id="clock">--:--</div><span class="badge" id="wfstate">-</span></div>
     <div class="steps" id="steps"></div>
   </header>
-  <nav class="scenarios" id="scenarios"></nav>
   <main class="layout">
     <section class="panel">
-      <h2>画面を開く</h2>
-      <p class="note">それぞれ別のウィンドウで開けます。どの画面で操作しても、ほかの画面に1秒ほどで反映されます。</p>
       <div id="screens"></div>
-      <h2 class="mt">5つの層（いま動いた層が光る）</h2>
-      <div class="layers" id="layers"></div>
-      <h2 class="mt">出来事の流れ（クリックで中身）</h2>
-      <div class="timeline" id="timeline"></div>
+      <div class="timeline mt" id="timeline"></div>
     </section>
     <section class="panel">
       <div class="tabs" id="tabs"></div>

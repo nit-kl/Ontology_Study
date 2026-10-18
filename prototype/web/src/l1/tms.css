@@ -3,23 +3,13 @@ body { margin: 0; background: #3a6ea5; font: 12px/1.4 "MS UI Gothic", Tahoma, sa
 .xp { max-width: 1150px; margin: 14px auto; background: #ece9d8; border: 1px solid #0831d9; border-radius: 8px 8px 0 0; box-shadow: 2px 2px 8px rgba(0, 0, 0, .4); overflow: hidden; }
 .xptitle { background: linear-gradient(#0a5fe0, #2b7cf0 8%, #0054e3 40%, #0047c2 92%, #003aa8); color: #fff; font: bold 13px Tahoma, sans-serif; padding: 5px 8px;
   display: flex; align-items: center; gap: 6px; text-shadow: 1px 1px 0 #002a80; }
-.xptitle .btns { margin-left: auto; display: flex; gap: 2px; }
-.xptitle .btns b { width: 21px; height: 21px; border-radius: 3px; border: 1px solid #fff; background: linear-gradient(#3c8cf8, #1d5fd6); display: grid; place-items: center; font-size: 11px; }
-.xptitle .btns b.x { background: linear-gradient(#e8806a, #c13d22); }
-.menubar { display: flex; gap: 14px; padding: 3px 8px; border-bottom: 1px solid #aca899; background: #ece9d8; }
-.tabs { display: flex; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid #919b9c; }
-.tabs button { font: inherit; background: linear-gradient(#fffffe, #ecebe5); border: 1px solid #919b9c; border-bottom: 0; border-radius: 3px 3px 0 0; padding: 4px 14px; cursor: pointer; }
-.tabs button.on { background: #fcfcfe; border-top: 2px solid #ffc83c; font-weight: bold; position: relative; top: 1px; }
-.page { background: #fcfcfe; margin: 0 8px; border: 1px solid #919b9c; border-top: 0; padding: 10px; min-height: 420px; }
-.grp { border: 1px solid #d0d0bf; border-radius: 4px; padding: 10px 8px 8px; margin-bottom: 10px; position: relative; }
-.grp > .cap { position: absolute; top: -8px; left: 8px; background: #fcfcfe; padding: 0 4px; color: #0046d5; }
+.page { background: #fcfcfe; margin: 8px; border: 1px solid #919b9c; padding: 10px; }
 table.grid { border-collapse: collapse; width: 100%; background: #fff; }
 .grid th { background: linear-gradient(#fdfdfd, #ebeadb); border: 1px solid #c5c2b2; font-weight: normal; padding: 3px 6px; text-align: left; }
 .grid td { border: 1px solid #e3e0d0; padding: 3px 6px; font-family: "MS Gothic", monospace; }
-.grid tr.sel td { background: #316ac5; color: #fff; }
 .grid tr.add td { background: #fff7cc; }
 .grid td.n { text-align: right; }
-svg.map { width: 100%; height: auto; background: #f2efe2; border: 1px inset #aca899; }
+svg.map { display: block; margin-bottom: 8px; width: 100%; height: auto; background: #f2efe2; border: 1px inset #aca899; }
 .map .grid1 { stroke: #dcd6bf; stroke-width: 1; }
 .map .route { fill: none; stroke-width: 3; }
 .map .r1 { stroke: #2a78d6; }
@@ -27,11 +17,6 @@ svg.map { width: 100%; height: auto; background: #f2efe2; border: 1px inset #aca
 .map .store { fill: #fff; stroke: #000; stroke-width: 1.5; }
 .map .t { font: 11px "MS Gothic", monospace; fill: #000; }
 .map .ring { fill: none; stroke: #888; stroke-dasharray: 3 3; }
-.legend { display: flex; gap: 16px; margin: 6px 0; }
-.legend i { display: inline-block; width: 24px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: 4px; }
-.statusbar { display: flex; gap: 2px; padding: 3px 8px; background: #ece9d8; border-top: 1px solid #aca899; }
-.statusbar span { border: 1px solid #aca899; border-color: #aca899 #fff #fff #aca899; padding: 0 8px; flex: 1; }
-.empty { color: #666; padding: 10px; }
 .back-to-hub { position: fixed; right: 8px; bottom: 6px; font: 11px sans-serif; color: #dbe6f5; }
 .toast { position: fixed; right: 16px; bottom: 30px; background: #ffffe1; border: 1px solid #000; padding: 6px 10px; border-radius: 6px; box-shadow: 2px 2px 4px rgba(0, 0, 0, .3); }
 .toast::before { content: "🔔 "; }
