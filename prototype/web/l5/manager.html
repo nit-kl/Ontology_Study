@@ -3,23 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="theme-color" content="#1e3a5f">
   <title>店長アプリ</title>
 </head>
 <body>
-  <div class="phone">
-    <div class="statusbar"><span id="clock">--:--</span><span class="sig">▂▄▆█ 5G ▮</span></div>
-    <div class="scroller" id="scroller">
-      <header class="appbar">
-        <div>
-          <div class="eyebrow" id="store">1号店</div>
-          <div class="hello" id="hello">店長</div>
-        </div>
-        <div class="avatar" id="avatar">店</div>
-      </header>
-      <main id="screen"></main>
-    </div>
-    <div class="done-overlay" id="done" hidden><div class="done-check">✓</div><b>承認しました</b><span>本部と店のシステムに反映しました</span></div>
+  <div class="tablet">
+    <header class="bar">
+      <div class="app">店舗業務</div>
+      <div class="store" id="store">1号店</div>
+      <div class="when" id="when">--</div>
+      <div class="user" id="user">店長</div>
+    </header>
+    <nav class="kpis" id="kpis"></nav>
+    <main class="cols">
+      <section class="pane"><h2>要対応 <span class="count" id="count">0</span></h2><div id="todo"></div></section>
+      <section class="pane"><h2>処理履歴</h2><div id="history"></div></section>
+    </main>
   </div>
   <a class="back-to-hub" href="/">司令塔へ</a>
   <script type="module" src="/src/l5/manager.ts"></script>
