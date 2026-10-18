@@ -4,8 +4,8 @@
 
 | 文書 | 内容 |
 | --- | --- |
-| [usecase.md](usecase.md) | ユースケースの一覧、共通の流れ、登場する店舗・車両・設備 |
-| [usecases/uc1-stockout.md](usecases/uc1-stockout.md) | UC1 ネットスーパーの欠品代替 |
+| [usecase.md](usecase.md) | ユースケースの一覧、共通の流れ、登場する拠点・顧客・車両・設備 |
+| [usecases/uc1-forecast.md](usecases/uc1-forecast.md) | UC1 明日の発注と需要予測 |
 | [usecases/uc2-power-peak.md](usecases/uc2-power-peak.md) | UC2 電力ピークの自動調整 |
 | [usecases/uc3-evening-transfer.md](usecases/uc3-evening-transfer.md) | UC3 夕方の在庫融通と見切り |
 | [system.md](system.md) | 5層の構成図と、ユースケースが通る経路 |
